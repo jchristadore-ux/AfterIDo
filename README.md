@@ -1,6 +1,6 @@
 # AfterIDo
 
-**Your new name. Everywhere it matters.**
+**Your new name, everywhere it matters.**
 
 A mobile-first web app that turns changing your name after marriage from a month
 of research into an afternoon of tasks. Enter your information once; AfterIDo
