@@ -13,6 +13,11 @@ import path from 'node:path';
  */
 export default defineConfig({
   base: process.env.VITE_BASE || '/',
+  build: {
+    // VITE_INLINE_ASSETS=1 emits assets as data URIs instead of separate
+    // files, for building a single self-contained HTML page.
+    assetsInlineLimit: process.env.VITE_INLINE_ASSETS ? 8 * 1024 * 1024 : undefined,
+  },
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, './src') },

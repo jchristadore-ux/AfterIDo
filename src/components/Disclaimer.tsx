@@ -2,15 +2,15 @@ import { Link } from 'react-router-dom';
 import { cx } from './ui';
 
 export const DISCLAIMER_TEXT =
-  'NameDay is not a government agency, law firm, or legal service. We help organize and simplify the name-change process and direct you to official sources. We cannot submit a name change on your behalf.';
+  'AfterIDo is not a government agency, law firm, or legal service. We help organize and simplify the name-change process and direct you to official sources. We cannot submit a name change on your behalf.';
 
 /** Shown at the bottom of every screen in the app. Not dismissible. */
 export function Disclaimer({ className }: { className?: string }) {
   return (
-    <div className={cx('border-t border-ink-100 pt-5', className)}>
-      <p className="text-xs leading-relaxed text-ink-400">
+    <div className={cx('border-t border-charcoal-100 pt-5', className)}>
+      <p className="text-xs leading-relaxed text-charcoal-400">
         {DISCLAIMER_TEXT}{' '}
-        <Link to="/trust" className="underline underline-offset-2 hover:text-ink-700">
+        <Link to="/trust" className="underline underline-offset-2 hover:text-charcoal-700">
           How we handle your information
         </Link>
       </p>
@@ -19,7 +19,7 @@ export function Disclaimer({ className }: { className?: string }) {
 }
 
 /**
- * The honest label on every task: can NameDay prepare this, or must she file it
+ * The honest label on every task: can AfterIDo prepare this, or must she file it
  * herself? Rendered wherever a task appears so the distinction is never buried.
  */
 export function WeCanBadge({ weCan }: { weCan: 'prepare' | 'submit' }) {
@@ -28,7 +28,7 @@ export function WeCanBadge({ weCan }: { weCan: 'prepare' | 'submit' }) {
       We prepare it · you submit
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-paper-sunk px-2.5 py-0.5 text-xs font-medium text-ink-700">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-charcoal-200 bg-surface-sunk px-2.5 py-0.5 text-xs font-medium text-charcoal-700">
       You submit this yourself
     </span>
   );

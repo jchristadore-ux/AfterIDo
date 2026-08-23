@@ -7,7 +7,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
-import { Wordmark } from './Wordmark';
+import { WordmarkLink } from './Wordmark';
 import { cx } from './ui';
 import { Disclaimer } from './Disclaimer';
 
@@ -33,10 +33,10 @@ export function AppShell() {
   const location = useLocation();
 
   return (
-    <div className="min-h-dvh bg-paper lg:flex">
+    <div className="min-h-dvh bg-canvas lg:flex">
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 border-r border-ink-100 bg-paper-raised px-5 py-7 lg:flex lg:flex-col">
-        <Wordmark to="/app" />
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 border-r border-charcoal-100 bg-surface px-5 py-7 lg:flex lg:flex-col">
+        <WordmarkLink to="/app" />
 
         <nav className="mt-9 flex flex-col gap-1">
           {NAV.map(({ to, label, icon: Icon }) => (
@@ -48,8 +48,8 @@ export function AppShell() {
                 cx(
                   'flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.95rem] font-medium transition-colors',
                   isActive
-                    ? 'bg-rose-50 text-rose-700'
-                    : 'text-ink-700 hover:bg-paper-sunk hover:text-ink-900',
+                    ? 'bg-primary-50 text-primary-700'
+                    : 'text-charcoal-700 hover:bg-surface-sunk hover:text-charcoal-900',
                 )
               }
             >
@@ -60,17 +60,17 @@ export function AppShell() {
         </nav>
 
         <div className="mt-auto space-y-3 pt-6">
-          <div className="rounded-2xl bg-paper-sunk p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-400">
+          <div className="rounded-2xl bg-surface-sunk p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-charcoal-400">
               Progress
             </p>
-            <p className="mt-1 font-display text-2xl text-ink-900">{progress.percent}%</p>
-            <p className="text-xs text-ink-500">
+            <p className="mt-1 font-display text-2xl text-charcoal-900">{progress.percent}%</p>
+            <p className="text-xs text-charcoal-500">
               {progress.settled} of {progress.total} done
             </p>
           </div>
           {state.demoMode && (
-            <p className="rounded-xl border border-amber-500/25 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            <p className="rounded-xl border border-champagne-500/25 bg-champagne-50 px-3 py-2 text-xs text-charcoal-700">
               Demo mode — sample data
             </p>
           )}
@@ -79,16 +79,16 @@ export function AppShell() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile header */}
-        <header className="sticky top-0 z-30 border-b border-ink-100 bg-paper/85 backdrop-blur-md lg:hidden">
+        <header className="sticky top-0 z-30 border-b border-charcoal-100 bg-canvas/85 backdrop-blur-md lg:hidden">
           <div className="flex items-center justify-between px-5 py-3.5">
-            <Wordmark to="/app" size="sm" />
-            <div className="flex items-center gap-2 text-xs text-ink-500">
+            <WordmarkLink to="/app" size="sm" />
+            <div className="flex items-center gap-2 text-xs text-charcoal-500">
               {state.demoMode && (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700">
+                <span className="rounded-full bg-champagne-100 px-2 py-0.5 font-medium text-charcoal-700">
                   Demo
                 </span>
               )}
-              <span className="font-medium text-ink-700">{progress.percent}% done</span>
+              <span className="font-medium text-charcoal-700">{progress.percent}% done</span>
             </div>
           </div>
         </header>
@@ -104,7 +104,7 @@ export function AppShell() {
         </main>
 
         {/* Mobile bottom tabs */}
-        <nav className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-ink-100 bg-paper-raised/95 backdrop-blur-md lg:hidden">
+        <nav className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-charcoal-100 bg-surface/95 backdrop-blur-md lg:hidden">
           <div className="mx-auto grid max-w-lg grid-cols-4">
             {NAV.map(({ to, label, icon: Icon }) => (
               <NavLink
@@ -114,7 +114,7 @@ export function AppShell() {
                 className={({ isActive }) =>
                   cx(
                     'flex flex-col items-center gap-1 py-2.5 text-[0.68rem] font-medium transition-colors',
-                    isActive ? 'text-rose-600' : 'text-ink-500',
+                    isActive ? 'text-primary-600' : 'text-charcoal-500',
                   )
                 }
               >

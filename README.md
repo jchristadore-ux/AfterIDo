@@ -1,9 +1,9 @@
-# NameDay
+# AfterIDo
 
-**Your new name. Everywhere it matters.**
+**Your new name, everywhere it matters.**
 
 A mobile-first web app that turns changing your name after marriage from a month
-of research into an afternoon of tasks. Enter your information once; NameDay
+of research into an afternoon of tasks. Enter your information once; AfterIDo
 works out which of ~40 possible changes apply to you, sequences them in the
 order that actually works, fills your details in on every one, and tracks what's
 done.
@@ -53,7 +53,7 @@ a wasted trip to the DMV.
 
 These are enforced in the data and visible in the UI, not just in a disclaimer:
 
-- **NameDay never submits anything to an agency.** Every task carries a `weCan`
+- **AfterIDo never submits anything to an agency.** Every task carries a `weCan`
   flag rendered as a badge — *"We prepare it · you submit"*. There is no code
   path that files anything, and the UI says so where a user might assume
   otherwise.
@@ -156,3 +156,49 @@ the UI says exactly that.
 
 React 19 · TypeScript · Vite · Tailwind CSS v4 · React Router · lucide-react.
 No state library, no UI framework, no backend.
+
+---
+
+## Brand
+
+`src/brand.ts` is the source of truth; `src/index.css` mirrors the same hexes as
+`@theme` tokens, which is what the Tailwind utilities compile against. Change a
+color in one and change it in the other.
+
+| Role | Hex | Token |
+|---|---|---|
+| Primary (rose-gold) | `#D4A5A5` | `primary` |
+| Secondary (champagne) | `#E8D5C4` | `champagne` |
+| Success (sage) | `#7A9E9F` | `sage` |
+| Text (charcoal) | `#2C3E50` | `charcoal` |
+| Background | `#FFFFFF` | `canvas` |
+| Disabled | `#E0E0E0` | `disabled` |
+| Destructive | `#C97B7B` | `destructive` |
+
+Headings are Playfair Display, body and UI are Inter, both from Google Fonts with
+a system fallback stack.
+
+The numbered steps around each brand color (`primary-50` … `primary-700`) are
+tints and shades derived for surfaces, borders and hover states — a UI needs more
+than eight values. The **unnumbered token is always the exact brand hex**, and
+that is what every button fill, border and brand accent uses.
+
+### Buttons
+
+One component, six variants, all pill-shaped with soft elevation:
+`primary`, `secondary`, `success`, `destructive`, `ghost`, plus the circular
+`Fab`. `disabled` is a state rather than a variant, so every variant lands on the
+same `#E0E0E0` treatment via `disabled:` utilities.
+
+### Known contrast trade-off
+
+The brand specifies white text on the rose-gold, sage and destructive fills, and
+brand-colored text on white for the outline variants. Measured, those pair at
+2.16:1, 2.91:1 and 3.18:1 — below the 4.5:1 WCAG AA threshold. **The spec is
+implemented as written.** All body copy, headings and labels sit in charcoal on
+white or champagne (10.98:1 and 7.71:1), so the shortfall is confined to text on
+brand-colored buttons.
+
+`ACCESSIBLE_ALTERNATES` in `src/brand.ts` holds the lightest shade of each hue
+that clears 4.5:1 against white, computed rather than eyeballed. Swapping a
+token in `index.css` is a one-line change per color if readability should win.

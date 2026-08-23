@@ -193,7 +193,7 @@ export const STATUS_LABEL: Record<TaskStatus, string> = {
   'not-started': 'Not started',
   'in-progress': 'In progress',
   waiting: 'Waiting to hear back',
-  complete: 'Complete',
+  complete: 'Completed',
   'not-applicable': 'Not applicable',
 };
 

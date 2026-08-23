@@ -10,8 +10,9 @@ import {
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { Check, Copy, Info, X } from 'lucide-react';
+import { Check, Copy, Info, Plus, X } from 'lucide-react';
 
 export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(' ');
@@ -19,26 +20,46 @@ export function cx(...parts: (string | false | null | undefined)[]): string {
 
 // ---------------------------------------------------------------- Button
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+/**
+ * The AfterIDo button system.
+ *
+ * Six variants, all pill-shaped with soft elevation, sized for thumbs. The
+ * fills are the exact brand hexes:
+ *
+ *   primary      #D4A5A5 fill, white bold text     "Mark as Updated", "Continue"
+ *   secondary    white fill, #D4A5A5 border+text   "Add Another Place"
+ *   success      #7A9E9F fill, white text + check  "Completed"
+ *   disabled     #E0E0E0 fill, muted text, flat    (via the disabled attribute)
+ *   destructive  white fill, #C97B7B border+text   "Remove"
+ *   ghost        text only                          low-emphasis nav
+ *
+ * `disabled` is a state rather than a variant, so it is expressed as disabled:
+ * utilities on each variant — a disabled primary and a disabled secondary both
+ * land on #E0E0E0 with muted text and no shadow, as specified.
+ */
+type Variant = 'primary' | 'secondary' | 'success' | 'ghost' | 'destructive';
 type Size = 'sm' | 'md' | 'lg';
 
+/** Applied to every filled/outlined variant so disabled always looks the same. */
+const DISABLED =
+  'disabled:bg-disabled disabled:text-disabled-text disabled:border-disabled disabled:shadow-none';
+
 const VARIANT: Record<Variant, string> = {
-  primary:
-    'bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 shadow-soft disabled:bg-ink-200 disabled:text-ink-500 disabled:shadow-none',
-  secondary:
-    'bg-paper-raised text-ink-900 border border-ink-200 hover:border-ink-400 hover:bg-paper-sunk active:bg-ink-100',
-  ghost: 'text-ink-700 hover:bg-paper-sunk hover:text-ink-900',
-  danger: 'bg-clay-600 text-white hover:bg-clay-700 active:bg-clay-700',
+  primary: `bg-primary text-white font-semibold border border-transparent shadow-button hover:bg-primary-600 active:bg-primary-700 ${DISABLED}`,
+  secondary: `bg-white text-primary border border-primary shadow-soft hover:bg-primary-50 active:bg-primary-100 ${DISABLED}`,
+  success: `bg-sage text-white font-semibold border border-transparent shadow-soft hover:bg-sage-600 active:bg-sage-700 ${DISABLED}`,
+  ghost: 'text-charcoal-700 border border-transparent hover:bg-surface-sunk hover:text-charcoal-900 disabled:text-disabled-text',
+  destructive: `bg-white text-destructive border border-destructive shadow-soft hover:bg-destructive-50 active:bg-destructive-100 ${DISABLED}`,
 };
 
 const SIZE: Record<Size, string> = {
-  sm: 'h-9 px-3.5 text-sm gap-1.5',
-  md: 'h-11 px-5 text-[0.95rem] gap-2',
-  lg: 'h-14 px-7 text-base gap-2.5',
+  sm: 'h-9 px-4 text-sm gap-1.5',
+  md: 'h-12 px-6 text-[0.95rem] gap-2',
+  lg: 'h-14 px-8 text-base gap-2.5',
 };
 
 const BUTTON_BASE =
-  'inline-flex items-center justify-center rounded-full font-medium transition-colors duration-150 select-none disabled:cursor-not-allowed whitespace-nowrap';
+  'inline-flex items-center justify-center rounded-full font-medium transition-all duration-150 select-none disabled:cursor-not-allowed whitespace-nowrap';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -118,6 +139,53 @@ export function ExternalButton({
   );
 }
 
+/**
+ * Floating action button — circular, rose-gold, white "+", elevated.
+ *
+ * Used for "Add Another Place" on the task screens that track several accounts
+ * (banks, cards, memberships), where it sits in thumb reach and focuses the
+ * add field. `label` is required: the icon alone tells a screen reader nothing.
+ *
+ * Rendered through a portal to <body> on purpose. `position: fixed` resolves
+ * against the nearest ancestor with a transform, and the app shell's <main>
+ * carries an entrance animation whose retained keyframe computes to a real
+ * matrix — which silently turns it into the containing block and strands the
+ * button partway down the page. Portalling past it is what keeps "fixed"
+ * meaning "fixed to the viewport".
+ */
+export function Fab({
+  label,
+  onClick,
+  icon,
+  className,
+}: {
+  label: string;
+  onClick: () => void;
+  icon?: ReactNode;
+  className?: string;
+}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  return createPortal(
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={cx(
+        'flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-fab',
+        'transition-transform duration-150 hover:scale-105 active:scale-95',
+        className,
+      )}
+    >
+      {icon ?? <Plus size={26} strokeWidth={2.5} />}
+    </button>,
+    document.body,
+  );
+}
+
 // ---------------------------------------------------------------- Surfaces
 
 export function Card({
@@ -132,7 +200,7 @@ export function Card({
   return (
     <As
       className={cx(
-        'rounded-card border border-ink-100 bg-paper-raised shadow-soft',
+        'rounded-card border border-charcoal-100 bg-surface shadow-soft',
         className,
       )}
     >
@@ -156,11 +224,11 @@ export function SectionHeading({
     <div className={cx('flex items-end justify-between gap-4', className)}>
       <div>
         {eyebrow && (
-          <p className="mb-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-ink-400">
+          <p className="mb-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-charcoal-400">
             {eyebrow}
           </p>
         )}
-        <h2 className="text-xl text-ink-900 sm:text-2xl">{title}</h2>
+        <h2 className="text-xl text-charcoal-900 sm:text-2xl">{title}</h2>
       </div>
       {action}
     </div>
@@ -169,14 +237,14 @@ export function SectionHeading({
 
 // ---------------------------------------------------------------- Badges
 
-type Tone = 'rose' | 'sage' | 'amber' | 'clay' | 'neutral';
+type Tone = 'primary' | 'success' | 'champagne' | 'destructive' | 'neutral';
 
 const TONE: Record<Tone, string> = {
-  rose: 'bg-rose-100 text-rose-700 border-rose-200',
-  sage: 'bg-sage-100 text-sage-700 border-sage-300/60',
-  amber: 'bg-amber-100 text-amber-700 border-amber-500/25',
-  clay: 'bg-clay-100 text-clay-700 border-clay-500/25',
-  neutral: 'bg-paper-sunk text-ink-700 border-ink-200',
+  primary: 'bg-primary-100 text-primary-700 border-primary-200',
+  success: 'bg-sage-100 text-sage-700 border-sage-300/60',
+  champagne: 'bg-champagne-100 text-charcoal-700 border-champagne-500/25',
+  destructive: 'bg-destructive-100 text-destructive-600 border-destructive/25',
+  neutral: 'bg-surface-sunk text-charcoal-700 border-charcoal-200',
 };
 
 export function Badge({
@@ -206,16 +274,16 @@ export function Badge({
 export function ProgressBar({
   percent,
   className,
-  tone = 'rose',
+  tone = 'primary',
 }: {
   percent: number;
   className?: string;
-  tone?: 'rose' | 'sage';
+  tone?: 'primary' | 'success';
 }) {
   const clamped = Math.max(0, Math.min(100, percent));
   return (
     <div
-      className={cx('h-2.5 w-full overflow-hidden rounded-full bg-ink-100', className)}
+      className={cx('h-2.5 w-full overflow-hidden rounded-full bg-charcoal-100', className)}
       role="progressbar"
       aria-valuenow={clamped}
       aria-valuemin={0}
@@ -225,8 +293,8 @@ export function ProgressBar({
       <div
         className={cx(
           'h-full rounded-full transition-[width] duration-700 ease-out',
-          tone === 'rose'
-            ? 'bg-gradient-to-r from-rose-400 to-rose-600'
+          tone === 'primary'
+            ? 'bg-gradient-to-r from-primary-400 to-primary-600'
             : 'bg-gradient-to-r from-sage-300 to-sage-600',
         )}
         style={{ width: `${clamped}%` }}
@@ -264,7 +332,7 @@ export function ProgressRing({
           cy={size / 2}
           r={r}
           fill="none"
-          stroke="var(--color-ink-100)"
+          stroke="var(--color-charcoal-100)"
           strokeWidth={stroke}
         />
         <circle
@@ -272,7 +340,7 @@ export function ProgressRing({
           cy={size / 2}
           r={r}
           fill="none"
-          stroke="url(#nd-ring)"
+          stroke="url(#aid-ring)"
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={circumference}
@@ -280,9 +348,9 @@ export function ProgressRing({
           style={{ transition: 'stroke-dashoffset 900ms cubic-bezier(0.2,0.7,0.3,1)' }}
         />
         <defs>
-          <linearGradient id="nd-ring" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="var(--color-rose-400)" />
-            <stop offset="100%" stopColor="var(--color-rose-600)" />
+          <linearGradient id="aid-ring" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="var(--color-primary-400)" />
+            <stop offset="100%" stopColor="var(--color-primary-600)" />
           </linearGradient>
         </defs>
       </svg>
@@ -312,19 +380,19 @@ export function Field({
 }) {
   return (
     <label className={cx('block', className)}>
-      <span className="mb-1.5 flex items-baseline gap-2 text-sm font-medium text-ink-700">
+      <span className="mb-1.5 flex items-baseline gap-2 text-sm font-medium text-charcoal-700">
         {label}
-        {optional && <span className="text-xs font-normal text-ink-400">optional</span>}
+        {optional && <span className="text-xs font-normal text-charcoal-400">optional</span>}
       </span>
       {children}
-      {hint && !error && <span className="mt-1.5 block text-xs text-ink-500">{hint}</span>}
-      {error && <span className="mt-1.5 block text-xs text-clay-600">{error}</span>}
+      {hint && !error && <span className="mt-1.5 block text-xs text-charcoal-500">{hint}</span>}
+      {error && <span className="mt-1.5 block text-xs text-destructive-600">{error}</span>}
     </label>
   );
 }
 
 const CONTROL =
-  'w-full rounded-xl border border-ink-200 bg-paper-raised px-3.5 py-3 text-ink-900 placeholder:text-ink-400 transition-colors focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-200';
+  'w-full rounded-xl border border-charcoal-200 bg-surface px-3.5 py-3 text-charcoal-900 placeholder:text-charcoal-400 transition-colors focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200';
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className, ...rest }, ref) {
@@ -370,8 +438,8 @@ export function ChoiceCard({
       className={cx(
         'flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-colors',
         selected
-          ? 'border-rose-400 bg-rose-50 ring-1 ring-rose-200'
-          : 'border-ink-200 bg-paper-raised hover:border-ink-400',
+          ? 'border-primary-400 bg-primary-50 ring-1 ring-primary-200'
+          : 'border-charcoal-200 bg-surface hover:border-charcoal-400',
       )}
     >
       <input
@@ -385,14 +453,14 @@ export function ChoiceCard({
         aria-hidden="true"
         className={cx(
           'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
-          selected ? 'border-rose-600 bg-rose-600' : 'border-ink-200',
+          selected ? 'border-primary-600 bg-primary-600' : 'border-charcoal-200',
         )}
       >
         {selected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
       </span>
       <span className="min-w-0">
-        <span className="block font-medium text-ink-900">{title}</span>
-        {description && <span className="mt-0.5 block text-sm text-ink-500">{description}</span>}
+        <span className="block font-medium text-charcoal-900">{title}</span>
+        {description && <span className="mt-0.5 block text-sm text-charcoal-500">{description}</span>}
       </span>
     </label>
   );
@@ -414,8 +482,8 @@ export function CheckCard({
       className={cx(
         'flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition-colors',
         checked
-          ? 'border-rose-400 bg-rose-50 ring-1 ring-rose-200'
-          : 'border-ink-200 bg-paper-raised hover:border-ink-400',
+          ? 'border-primary-400 bg-primary-50 ring-1 ring-primary-200'
+          : 'border-charcoal-200 bg-surface hover:border-charcoal-400',
       )}
     >
       <input type="checkbox" checked={checked} onChange={onToggle} className="sr-only" />
@@ -423,14 +491,14 @@ export function CheckCard({
         aria-hidden="true"
         className={cx(
           'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors',
-          checked ? 'border-rose-600 bg-rose-600 text-white' : 'border-ink-200',
+          checked ? 'border-primary-600 bg-primary-600 text-white' : 'border-charcoal-200',
         )}
       >
         {checked && <Check size={13} strokeWidth={3} />}
       </span>
       <span className="min-w-0">
-        <span className="block text-[0.95rem] font-medium text-ink-900">{title}</span>
-        {description && <span className="mt-0.5 block text-sm text-ink-500">{description}</span>}
+        <span className="block text-[0.95rem] font-medium text-charcoal-900">{title}</span>
+        {description && <span className="mt-0.5 block text-sm text-charcoal-500">{description}</span>}
       </span>
     </label>
   );
@@ -452,11 +520,11 @@ export function Callout({
   className?: string;
 }) {
   const toneClass: Record<Tone, string> = {
-    rose: 'border-rose-200 bg-rose-50 text-rose-800',
-    sage: 'border-sage-300/60 bg-sage-50 text-sage-700',
-    amber: 'border-amber-500/25 bg-amber-50 text-amber-700',
-    clay: 'border-clay-500/25 bg-clay-50 text-clay-700',
-    neutral: 'border-ink-200 bg-paper-sunk text-ink-700',
+    primary: 'border-primary-200 bg-primary-50 text-primary-700',
+    success: 'border-sage-300/60 bg-sage-50 text-sage-700',
+    champagne: 'border-champagne-500/25 bg-champagne-50 text-charcoal-700',
+    destructive: 'border-destructive/25 bg-destructive-50 text-destructive-600',
+    neutral: 'border-charcoal-200 bg-surface-sunk text-charcoal-700',
   };
 
   return (
@@ -570,13 +638,13 @@ export function Modal({
         type="button"
         aria-label="Close"
         onClick={onClose}
-        className="absolute inset-0 bg-ink-900/35 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-charcoal-900/35 backdrop-blur-[2px]"
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="animate-rise relative w-full max-w-lg rounded-t-3xl bg-paper-raised p-6 shadow-lift sm:rounded-3xl"
+        className="animate-rise relative w-full max-w-lg rounded-t-3xl bg-surface p-6 shadow-lift sm:rounded-3xl"
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <h2 id={titleId} className="text-xl">
@@ -585,7 +653,7 @@ export function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="-m-2 rounded-full p-2 text-ink-500 hover:bg-paper-sunk hover:text-ink-900"
+            className="-m-2 rounded-full p-2 text-charcoal-500 hover:bg-surface-sunk hover:text-charcoal-900"
             aria-label="Close"
           >
             <X size={18} />
@@ -612,15 +680,15 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="rounded-card border border-dashed border-ink-200 bg-paper-sunk/50 px-6 py-12 text-center">
-      {icon && <div className="mb-3 flex justify-center text-ink-400">{icon}</div>}
-      <p className="font-display text-lg text-ink-900">{title}</p>
-      {children && <p className="mx-auto mt-2 max-w-sm text-sm text-ink-500">{children}</p>}
+    <div className="rounded-card border border-dashed border-charcoal-200 bg-surface-sunk/50 px-6 py-12 text-center">
+      {icon && <div className="mb-3 flex justify-center text-charcoal-400">{icon}</div>}
+      <p className="font-display text-lg text-charcoal-900">{title}</p>
+      {children && <p className="mx-auto mt-2 max-w-sm text-sm text-charcoal-500">{children}</p>}
       {action && <div className="mt-5 flex justify-center">{action}</div>}
     </div>
   );
 }
 
 export function Divider({ className }: { className?: string }) {
-  return <hr className={cx('border-0 border-t border-ink-100', className)} />;
+  return <hr className={cx('border-0 border-t border-charcoal-100', className)} />;
 }
