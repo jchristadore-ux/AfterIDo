@@ -20,7 +20,7 @@ import type { AppState, Profile } from '@/types';
  * tell her to have them on hand; the app never asks her to type them in.
  */
 
-const STORAGE_KEY = 'nameday.state.v1';
+const STORAGE_KEY = 'afterido.state.v1';
 const STATE_VERSION = 1;
 
 export const EMPTY_PROFILE: Profile = {

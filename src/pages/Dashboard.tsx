@@ -1,7 +1,8 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   ArrowRight,
   Bell,
+  CircleCheck,
   CircleCheckBig,
   Clock,
   FileText,
@@ -23,6 +24,9 @@ import { WeCanBadge } from '@/components/Disclaimer';
 
 export function Dashboard() {
   const { state, tasks, progress } = useApp();
+  const location = useLocation();
+  /** Set by the task screen's "Mark as Updated" — the milestone moment. */
+  const justUpdated = (location.state as { justUpdated?: string } | null)?.justUpdated;
   const next = nextBestAction(tasks);
   const alsoReady = upNext(tasks, next?.id, 3);
   const phases = groupByPhase(tasks);
@@ -40,9 +44,24 @@ export function Dashboard() {
 
   return (
     <div className="space-y-10">
+      {/* ------------------------------------------------------ Milestone */}
+      {justUpdated && !allDone && (
+        <div className="animate-rise flex items-start gap-3 rounded-card border border-sage-300/60 bg-sage-50 p-5">
+          <CircleCheck size={22} className="mt-0.5 shrink-0 text-sage-600" />
+          <div className="min-w-0">
+            <p className="font-display text-lg text-charcoal-900">
+              Another one done — you’re crushing this.
+            </p>
+            <p className="mt-0.5 text-sm text-charcoal-700">
+              {justUpdated} is marked as updated.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ------------------------------------------------------- Greeting */}
       <header>
-        <h1 className="text-balance text-3xl text-ink-900 sm:text-4xl">
+        <h1 className="text-balance text-3xl text-charcoal-900 sm:text-4xl">
           {allDone ? (
             <>You did it, {firstName}. 🎉</>
           ) : (
@@ -51,17 +70,17 @@ export function Dashboard() {
             </>
           )}
         </h1>
-        <p className="mt-2 text-lg text-ink-600">
+        <p className="mt-2 text-lg text-charcoal-700">
           {allDone ? (
             <>
               Every task on your list is settled. You are{' '}
-              <strong className="font-medium text-ink-900">{fullName(state.profile.newName)}</strong>{' '}
+              <strong className="font-medium text-charcoal-900">{fullName(state.profile.newName)}</strong>{' '}
               everywhere that matters.
             </>
           ) : (
             <>
               Your name-change journey is{' '}
-              <strong className="font-medium text-ink-900">{progress.percent}% complete</strong>.
+              <strong className="font-medium text-charcoal-900">{progress.percent}% complete</strong>.
             </>
           )}
         </p>
@@ -71,21 +90,21 @@ export function Dashboard() {
       <Card className="overflow-hidden">
         <div className="flex flex-col items-center gap-6 p-6 sm:flex-row sm:gap-8 sm:p-7">
           <ProgressRing percent={progress.percent}>
-            <span className="font-display text-3xl leading-none text-ink-900">
+            <span className="font-display text-3xl leading-none text-charcoal-900">
               {progress.percent}%
             </span>
-            <span className="mt-1 text-xs text-ink-400">complete</span>
+            <span className="mt-1 text-xs text-charcoal-400">complete</span>
           </ProgressRing>
 
           <div className="min-w-0 flex-1 text-center sm:text-left">
-            <p className="font-display text-2xl text-ink-900">
+            <p className="font-display text-2xl text-charcoal-900">
               {progress.settled} of {progress.total} tasks complete
             </p>
             <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
               {progress.inProgress > 0 && (
-                <Badge tone="rose">{progress.inProgress} in progress</Badge>
+                <Badge tone="primary">{progress.inProgress} in progress</Badge>
               )}
-              {progress.waiting > 0 && <Badge tone="amber">{progress.waiting} waiting</Badge>}
+              {progress.waiting > 0 && <Badge tone="champagne">{progress.waiting} waiting</Badge>}
               <Badge>{progress.remaining} to go</Badge>
             </div>
             <div className="mt-5 flex flex-wrap justify-center gap-2 sm:justify-start">
@@ -105,10 +124,10 @@ export function Dashboard() {
       {next ? (
         <section>
           <SectionHeading eyebrow="Your next step" title={next.title} className="mb-4" />
-          <Card className="overflow-hidden border-rose-200">
-            <div className="bg-gradient-to-br from-rose-50 to-paper-raised p-6">
+          <Card className="overflow-hidden border-primary-200">
+            <div className="bg-gradient-to-br from-primary-50 to-surface p-6">
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <Badge tone="rose">
+                <Badge tone="primary">
                   <Sparkles size={12} /> Do this next
                 </Badge>
                 <Badge>
@@ -116,7 +135,7 @@ export function Dashboard() {
                 </Badge>
                 <WeCanBadge weCan={next.weCan} />
               </div>
-              <p className="text-pretty leading-relaxed text-ink-700">{next.whyNow}</p>
+              <p className="text-pretty leading-relaxed text-charcoal-700">{next.whyNow}</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <LinkButton to={`/app/task/${next.id}`} size="lg">
                   Start this step
@@ -125,8 +144,8 @@ export function Dashboard() {
               </div>
             </div>
             {next.stateGuidance?.headline && (
-              <p className="border-t border-rose-100 bg-paper-sunk px-6 py-3 text-sm text-ink-600">
-                <strong className="font-medium text-ink-900">
+              <p className="border-t border-primary-100 bg-surface-sunk px-6 py-3 text-sm text-charcoal-700">
+                <strong className="font-medium text-charcoal-900">
                   {next.stateGuidance.agencyName}:
                 </strong>{' '}
                 {next.stateGuidance.headline}
@@ -136,9 +155,9 @@ export function Dashboard() {
         </section>
       ) : (
         <Card className="p-8 text-center">
-          <PartyPopper className="mx-auto mb-3 text-rose-600" size={30} />
+          <PartyPopper className="mx-auto mb-3 text-primary-600" size={30} />
           <h2 className="text-2xl">Nothing left to do</h2>
-          <p className="mx-auto mt-2 max-w-sm text-ink-500">
+          <p className="mx-auto mt-2 max-w-sm text-charcoal-500">
             Every task on your list is complete or marked not applicable. Print your packet as a
             record of what you changed and when.
           </p>
@@ -152,21 +171,21 @@ export function Dashboard() {
       {reminders.length > 0 && (
         <section>
           <SectionHeading eyebrow="Coming up" title="Your reminders" className="mb-4" />
-          <Card className="divide-y divide-ink-100">
+          <Card className="divide-y divide-charcoal-100">
             {reminders.map((task) => (
               <Link
                 key={task.id}
                 to={`/app/task/${task.id}`}
-                className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-paper-sunk"
+                className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-surface-sunk"
               >
-                <Bell size={16} className="shrink-0 text-rose-600" />
+                <Bell size={16} className="shrink-0 text-primary-600" />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium text-ink-900">{task.title}</span>
-                  <span className="text-sm text-ink-500">
+                  <span className="block truncate font-medium text-charcoal-900">{task.title}</span>
+                  <span className="text-sm text-charcoal-500">
                     Reminder {relativeDay(task.state.remindAt!)}
                   </span>
                 </span>
-                <ArrowRight size={16} className="shrink-0 text-ink-300" />
+                <ArrowRight size={16} className="shrink-0 text-charcoal-400" />
               </Link>
             ))}
           </Card>
@@ -198,7 +217,7 @@ export function Dashboard() {
           action={
             <Link
               to="/app/checklist"
-              className="text-sm font-medium text-rose-600 hover:text-rose-700"
+              className="text-sm font-medium text-primary-600 hover:text-primary-700"
             >
               See all
             </Link>
@@ -212,8 +231,8 @@ export function Dashboard() {
                 key={phase.n}
                 className={
                   phase.current
-                    ? 'flex items-center gap-4 rounded-2xl border border-rose-200 bg-rose-50 p-4'
-                    : 'flex items-center gap-4 rounded-2xl border border-ink-100 bg-paper-raised p-4'
+                    ? 'flex items-center gap-4 rounded-2xl border border-primary-200 bg-primary-50 p-4'
+                    : 'flex items-center gap-4 rounded-2xl border border-charcoal-100 bg-surface p-4'
                 }
               >
                 <span
@@ -221,17 +240,17 @@ export function Dashboard() {
                     phase.complete
                       ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sage-500 text-white'
                       : phase.current
-                        ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-600 font-display text-white'
-                        : 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-paper-sunk font-display text-ink-400'
+                        ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-600 font-display text-white'
+                        : 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-sunk font-display text-charcoal-400'
                   }
                 >
                   {phase.complete ? <CircleCheckBig size={17} /> : phase.n}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-medium text-ink-900">{phase.title}</span>
-                  <span className="block text-sm text-ink-500">{phase.caption}</span>
+                  <span className="block font-medium text-charcoal-900">{phase.title}</span>
+                  <span className="block text-sm text-charcoal-500">{phase.caption}</span>
                 </span>
-                <span className="shrink-0 text-sm text-ink-400">
+                <span className="shrink-0 text-sm text-charcoal-400">
                   {settled}/{phase.tasks.length}
                 </span>
               </li>

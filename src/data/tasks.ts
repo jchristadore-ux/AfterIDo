@@ -1,14 +1,14 @@
 import type { CircumstanceId, Profile, TaskDefinition } from '@/types';
 
 /**
- * The NameDay task catalog.
+ * The AfterIDo task catalog.
  *
  * Rules this file follows, deliberately:
  *  - Every `officialLinks` entry points at a government agency or the actual
  *    company involved. We never link to an affiliate or a lookalike.
  *  - We never describe a legal requirement we can't attribute. Where a fact
  *    came from a specific official page it is recorded in `sourceNote`.
- *  - `weCan` is honest: 'prepare' means NameDay assembles the information or a
+ *  - `weCan` is honest: 'prepare' means AfterIDo assembles the information or a
  *    letter; 'submit' means she files it herself and we only organize the run.
  *    Nothing in this app submits anything to an agency.
  *
@@ -607,7 +607,7 @@ export const TASKS: TaskDefinition[] = [
     steps: [
       'Find your deed and check exactly how your name is written on it.',
       'Contact your county clerk or recorder of deeds to ask what a name correction requires.',
-      'Talk to a real estate attorney before recording anything — NameDay cannot advise on this.',
+      'Talk to a real estate attorney before recording anything — AfterIDo cannot advise on this.',
     ],
     officialLinks: [],
     prefill: ['currentFullName', 'newFullName', 'addressBlock'],
@@ -803,7 +803,7 @@ export const TASKS: TaskDefinition[] = [
     steps: [
       'Locate your will, power of attorney and healthcare directive.',
       'Update the name and, more importantly, the people named in them.',
-      'Talk to an estate attorney — NameDay is not a law firm and cannot advise here.',
+      'Talk to an estate attorney — AfterIDo is not a law firm and cannot advise here.',
       'Tell your spouse where the originals are kept.',
     ],
     officialLinks: [],

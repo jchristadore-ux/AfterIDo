@@ -1,5 +1,5 @@
 /**
- * Core domain types for NameDay.
+ * Core domain types for AfterIDo.
  *
  * Everything the app renders is derived from three inputs:
  *   1. the user's Profile (entered once, in onboarding)
@@ -97,7 +97,7 @@ export interface Category {
   label: string;
   blurb: string;
   /** Tailwind-ish token names resolved in the UI, not raw classes. */
-  tone: 'rose' | 'sage' | 'amber' | 'ink';
+  tone: 'primary' | 'success' | 'champagne' | 'charcoal';
 }
 
 export type Priority = 'do-first' | 'do-soon' | 'anytime';
@@ -111,7 +111,7 @@ export type TaskStatus =
 
 /**
  * A field of the user's profile that a given organization will ask for.
- * The point of NameDay: she types these once, we hand them back everywhere.
+ * The point of AfterIDo: she types these once, we hand them back everywhere.
  */
 export type PrefillFieldKey =
   | 'currentFullName'
@@ -162,7 +162,7 @@ export interface TaskDefinition {
   /** Profile fields this organization will ask for, in the order they ask. */
   prefill: PrefillFieldKey[];
   /**
-   * 'prepare'  — NameDay can assemble the information or a letter for her.
+   * 'prepare'  — AfterIDo can assemble the information or a letter for her.
    * 'submit'   — she must submit it herself; we can only guide and organize.
    * Deliberately explicit so the UI never overstates what we do.
    */

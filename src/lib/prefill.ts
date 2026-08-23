@@ -110,7 +110,7 @@ export function prefillAsText(fields: PrefillField[]): string {
  * notice (banks, landlords, memberships, utilities).
  *
  * Deliberately generic and non-legal: this is a courtesy letter she could have
- * written herself, never a government form. NameDay does not generate or
+ * written herself, never a government form. AfterIDo does not generate or
  * imitate official agency forms.
  */
 export function notificationLetter(profile: Profile, recipient: string): string {

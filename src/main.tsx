@@ -18,7 +18,7 @@ import './index.css';
 const useHashRouter = import.meta.env.VITE_ROUTER === 'hash';
 const Router = useHashRouter ? HashRouter : BrowserRouter;
 
-// BASE_URL is '/' or '/NameDay/'. React Router wants it without the trailing
+// BASE_URL is '/' or '/AfterIDo/'. React Router wants it without the trailing
 // slash, and wants nothing at all when the app is at the domain root.
 const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || undefined;
 

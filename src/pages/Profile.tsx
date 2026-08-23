@@ -7,6 +7,8 @@ import { CIRCUMSTANCES } from '@/data/categories';
 import { US_STATES } from '@/data/states';
 import { tasksForProfile } from '@/data/tasks';
 import { formatPhone, fullName } from '@/lib/format';
+import { AfterIDoBrand, APP_VERSION } from '@/brand';
+import { Wordmark } from '@/components/Wordmark';
 import {
   Button,
   Callout,
@@ -57,28 +59,28 @@ export function Profile() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-3xl text-ink-900 sm:text-4xl">Your profile</h1>
-        <p className="mt-2 text-ink-600">
+        <h1 className="text-3xl text-charcoal-900 sm:text-4xl">Your profile</h1>
+        <p className="mt-2 text-charcoal-700">
           Change anything here and every task updates with it — you never retype.
         </p>
       </header>
 
       {/* --------------------------------------------------------- Names */}
       <Card className="overflow-hidden">
-        <div className="grid gap-px bg-ink-100 sm:grid-cols-2">
-          <div className="bg-paper-raised p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">
+        <div className="grid gap-px bg-charcoal-100 sm:grid-cols-2">
+          <div className="bg-surface p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-charcoal-400">
               Previous name
             </p>
-            <p className="mt-1.5 font-display text-2xl text-ink-700">
+            <p className="mt-1.5 font-display text-2xl text-charcoal-700">
               {fullName(state.profile.currentName) || '—'}
             </p>
           </div>
-          <div className="bg-rose-50 p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-600">
+          <div className="bg-primary-50 p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary-600">
               New legal name
             </p>
-            <p className="mt-1.5 font-display text-2xl text-ink-900">
+            <p className="mt-1.5 font-display text-2xl text-charcoal-900">
               {fullName(state.profile.newName) || '—'}
             </p>
           </div>
@@ -283,7 +285,7 @@ export function Profile() {
           className="mb-3"
           action={
             taskCount !== currentCount ? (
-              <span className="text-sm text-rose-600">
+              <span className="text-sm text-primary-600">
                 {taskCount > currentCount ? '+' : ''}
                 {taskCount - currentCount} tasks
               </span>
@@ -301,7 +303,7 @@ export function Profile() {
             />
           ))}
         </div>
-        <p className="mt-3 text-xs text-ink-400">
+        <p className="mt-3 text-xs text-charcoal-400">
           Unchecking something hides its tasks but keeps your progress on them, in case you
           change your mind.
         </p>
@@ -312,10 +314,10 @@ export function Profile() {
         <SectionHeading title="Your plan" className="mb-3" />
         <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
           <div>
-            <p className="font-medium text-ink-900">
+            <p className="font-medium text-charcoal-900">
               {state.plan === 'premium' ? 'Premium' : 'Free'}
             </p>
-            <p className="text-sm text-ink-500">
+            <p className="text-sm text-charcoal-500">
               {state.plan === 'premium'
                 ? 'State guidance, packet, letters, vault and reminders are unlocked.'
                 : 'Checklist and prefill. Upgrade for the packet, vault and reminders.'}
@@ -334,14 +336,24 @@ export function Profile() {
       </section>
 
       {/* -------------------------------------------------------- Privacy */}
-      <Callout tone="sage" icon={<ShieldCheck size={16} />} title="Your information">
+      <Callout tone="success" icon={<ShieldCheck size={16} />} title="Your information">
         Everything on this page is stored only in this browser. We never ask for your Social
         Security number, license number or account numbers, and nothing here is transmitted
         anywhere in this build.
       </Callout>
 
+      {/* ---------------------------------------------------------- About */}
       <section>
-        <Button variant="ghost" onClick={() => setConfirmReset(true)} className="text-clay-600">
+        <SectionHeading title="About" className="mb-3" />
+        <Card className="p-6 text-center">
+          <Wordmark size="lg" className="mx-auto" />
+          <p className="mt-4 text-sm text-charcoal-700">{AfterIDoBrand.tagline}</p>
+          <p className="mt-1 text-xs text-charcoal-400">Version {APP_VERSION}</p>
+        </Card>
+      </section>
+
+      <section>
+        <Button variant="ghost" onClick={() => setConfirmReset(true)} className="text-destructive-600">
           <RotateCcw size={15} /> Delete everything and start over
         </Button>
       </section>
@@ -349,8 +361,8 @@ export function Profile() {
       {/* Sticky save */}
       {dirty && (
         <div className="safe-bottom fixed inset-x-0 bottom-16 z-30 px-5 lg:bottom-6">
-          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 rounded-2xl bg-ink-900 px-5 py-3 shadow-lift">
-            <p className="text-sm text-paper/80">You have unsaved changes</p>
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 rounded-2xl bg-charcoal-900 px-5 py-3 shadow-lift">
+            <p className="text-sm text-white/80">You have unsaved changes</p>
             <Button size="sm" onClick={save}>
               <Save size={14} /> Save
             </Button>
@@ -374,7 +386,7 @@ export function Profile() {
               Cancel
             </Button>
             <Button
-              variant="danger"
+              variant="destructive"
               onClick={() => {
                 reset();
                 navigate('/');
@@ -385,7 +397,7 @@ export function Profile() {
           </>
         }
       >
-        <p className="text-ink-700">
+        <p className="text-charcoal-700">
           This clears your profile, your progress and your document list from this browser. It
           cannot be undone.
         </p>

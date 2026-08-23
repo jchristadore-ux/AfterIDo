@@ -22,25 +22,25 @@ export function Pricing() {
               key={tier.id}
               className={cx(
                 'flex flex-col p-6',
-                tier.highlight && 'border-rose-300 shadow-lift ring-1 ring-rose-200',
+                tier.highlight && 'border-primary-300 shadow-lift ring-1 ring-primary-200',
                 !tier.available && 'opacity-70',
               )}
             >
               {tier.highlight && (
-                <span className="mb-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-rose-600 px-3 py-1 text-xs font-semibold text-white">
+                <span className="mb-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-primary-600 px-3 py-1 text-xs font-semibold text-white">
                   <Sparkles size={12} /> Most useful
                 </span>
               )}
 
-              <h2 className="text-2xl text-ink-900">{tier.name}</h2>
-              <p className="mt-1 text-sm text-ink-500">{tier.tagline}</p>
+              <h2 className="text-2xl text-charcoal-900">{tier.name}</h2>
+              <p className="mt-1 text-sm text-charcoal-500">{tier.tagline}</p>
 
               <p className="mt-5 flex items-baseline gap-2">
-                <span className="font-display text-4xl text-ink-900">{tier.price}</span>
-                {tier.cadence && <span className="text-sm text-ink-400">{tier.cadence}</span>}
+                <span className="font-display text-4xl text-charcoal-900">{tier.price}</span>
+                {tier.cadence && <span className="text-sm text-charcoal-400">{tier.cadence}</span>}
               </p>
 
-              <ul className="mt-6 flex-1 space-y-2.5 text-sm text-ink-700">
+              <ul className="mt-6 flex-1 space-y-2.5 text-sm text-charcoal-700">
                 {tier.features.map((f) => (
                   <li key={f} className="flex items-start gap-2.5">
                     <Check size={15} className="mt-0.5 shrink-0 text-sage-600" />
@@ -76,7 +76,7 @@ export function Pricing() {
           ))}
         </div>
 
-        <Callout tone="amber" title="About payments in this build">
+        <Callout tone="champagne" title="About payments in this build">
           There is no payment processing here and no code path that takes money. “Unlock preview”
           turns the Premium features on locally so you can see what they do. A production
           deployment would create a Stripe Checkout session server-side and grant the entitlement
@@ -84,7 +84,7 @@ export function Pricing() {
         </Callout>
 
         <section>
-          <h2 className="text-2xl text-ink-900">Questions people actually ask</h2>
+          <h2 className="text-2xl text-charcoal-900">Questions people actually ask</h2>
           <dl className="mt-5 space-y-5">
             <Faq q="Do I need Premium to change my name?">
               No. The full checklist, the order of operations and every official link are free.
@@ -94,7 +94,7 @@ export function Pricing() {
               No. Premium is a single $19.99 payment. Premium Plus, if we build it, would be the
               subscription — for households and life events beyond the wedding.
             </Faq>
-            <Faq q="Can NameDay submit my name change for me?">
+            <Faq q="Can AfterIDo submit my name change for me?">
               No, and be wary of anything that says it can. Agencies don’t offer that to
               third-party apps. What we do is remove the research and the retyping.
             </Faq>
@@ -111,9 +111,9 @@ export function Pricing() {
 
 function Faq({ q, children }: { q: string; children: React.ReactNode }) {
   return (
-    <div className="border-t border-ink-100 pt-5">
-      <dt className="font-medium text-ink-900">{q}</dt>
-      <dd className="mt-1.5 leading-relaxed text-ink-600">{children}</dd>
+    <div className="border-t border-charcoal-100 pt-5">
+      <dt className="font-medium text-charcoal-900">{q}</dt>
+      <dd className="mt-1.5 leading-relaxed text-charcoal-700">{children}</dd>
     </div>
   );
 }

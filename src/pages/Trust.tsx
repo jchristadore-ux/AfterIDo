@@ -8,47 +8,47 @@ export function Trust() {
     <MarketingShell
       eyebrow="Privacy & trust"
       title="What we ask for, what we don’t, and where it goes."
-      intro="A name change touches the most sensitive records you have. Here is exactly how NameDay treats them — including the parts that aren’t finished yet."
+      intro="A name change touches the most sensitive records you have. Here is exactly how AfterIDo treats them — including the parts that aren’t finished yet."
     >
       <div className="space-y-10">
-        <Callout tone="rose" icon={<ShieldCheck size={16} />} title="The short version">
+        <Callout tone="primary" icon={<ShieldCheck size={16} />} title="The short version">
           We never ask for your Social Security number, driver’s license number, or any account
           number. In this build, nothing you type leaves your device — there is no server. Files
           you add to the vault stay in the browser tab and are never written to disk.
         </Callout>
 
         <section>
-          <h2 className="text-2xl text-ink-900">What we never collect</h2>
+          <h2 className="text-2xl text-charcoal-900">What we never collect</h2>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             {[
               ['Social Security numbers', 'Tasks tell you to have yours on hand. We never store it.'],
               ['Driver’s license numbers', 'Your state agency already has it.'],
               ['Bank or card numbers', 'You add a bank by name only — "Chase checking".'],
-              ['Passwords or logins', 'NameDay never signs in to anything on your behalf.'],
+              ['Passwords or logins', 'AfterIDo never signs in to anything on your behalf.'],
             ].map(([title, body]) => (
               <Card key={title} className="p-5">
-                <p className="flex items-center gap-2 font-medium text-ink-900">
-                  <Ban size={15} className="shrink-0 text-clay-600" />
+                <p className="flex items-center gap-2 font-medium text-charcoal-900">
+                  <Ban size={15} className="shrink-0 text-destructive-600" />
                   {title}
                 </p>
-                <p className="mt-1.5 text-sm text-ink-600">{body}</p>
+                <p className="mt-1.5 text-sm text-charcoal-700">{body}</p>
               </Card>
             ))}
           </div>
         </section>
 
         <section>
-          <h2 className="text-2xl text-ink-900">What we do collect, and why</h2>
-          <p className="mt-2 leading-relaxed text-ink-600">
+          <h2 className="text-2xl text-charcoal-900">What we do collect, and why</h2>
+          <p className="mt-2 leading-relaxed text-charcoal-700">
             Your name, date of birth, address, contact details and marriage information — because
             every agency asks for exactly those, and typing them once instead of thirty times is
             the entire point of the app.
           </p>
           <Card className="mt-5 p-5">
-            <p className="flex items-center gap-2 font-medium text-ink-900">
-              <Database size={16} className="text-rose-600" /> Where it lives in this build
+            <p className="flex items-center gap-2 font-medium text-charcoal-900">
+              <Database size={16} className="text-primary-600" /> Where it lives in this build
             </p>
-            <p className="mt-2 text-sm leading-relaxed text-ink-600">
+            <p className="mt-2 text-sm leading-relaxed text-charcoal-700">
               In your browser’s local storage, on this device only. There is no account, no
               server and no analytics on your profile. Clearing it from the profile page removes
               it completely — nothing is retained elsewhere because nothing was sent anywhere.
@@ -57,12 +57,12 @@ export function Trust() {
         </section>
 
         <section>
-          <h2 className="text-2xl text-ink-900">Documents you upload</h2>
+          <h2 className="text-2xl text-charcoal-900">Documents you upload</h2>
           <Card className="mt-4 p-5">
-            <p className="flex items-center gap-2 font-medium text-ink-900">
-              <FileWarning size={16} className="text-amber-600" /> Deliberately temporary
+            <p className="flex items-center gap-2 font-medium text-charcoal-900">
+              <FileWarning size={16} className="text-champagne-500" /> Deliberately temporary
             </p>
-            <p className="mt-2 text-sm leading-relaxed text-ink-600">
+            <p className="mt-2 text-sm leading-relaxed text-charcoal-700">
               A marriage certificate plus a passport scan plus a Social Security card is
               everything an identity thief needs. A browser can’t give those files the protection
               they deserve, so this build doesn’t pretend it can: uploaded files stay in memory
@@ -73,16 +73,16 @@ export function Trust() {
         </section>
 
         <section>
-          <h2 className="text-2xl text-ink-900">What production would add</h2>
-          <p className="mt-2 leading-relaxed text-ink-600">
+          <h2 className="text-2xl text-charcoal-900">What production would add</h2>
+          <p className="mt-2 leading-relaxed text-charcoal-700">
             The app is built against interfaces, not implementations, so these are swaps rather
             than rewrites. Being specific about what’s missing matters more than sounding secure.
           </p>
           <Card className="mt-5 p-5">
-            <p className="flex items-center gap-2 font-medium text-ink-900">
-              <KeyRound size={16} className="text-rose-600" /> The real deployment
+            <p className="flex items-center gap-2 font-medium text-charcoal-900">
+              <KeyRound size={16} className="text-primary-600" /> The real deployment
             </p>
-            <ul className="mt-3 space-y-2.5 text-sm leading-relaxed text-ink-600">
+            <ul className="mt-3 space-y-2.5 text-sm leading-relaxed text-charcoal-700">
               {[
                 'Authenticated accounts, with the profile held server-side and encrypted at rest.',
                 'Uploads sent straight to object storage through short-lived signed URLs, encrypted with a per-tenant key, never passing through the app server.',
@@ -91,7 +91,7 @@ export function Trust() {
                 'Payments through a hosted checkout, with entitlements granted only by verified webhook.',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2.5">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400" />
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary-400" />
                   {item}
                 </li>
               ))}
@@ -100,24 +100,24 @@ export function Trust() {
         </section>
 
         <section>
-          <h2 className="text-2xl text-ink-900">Where our information comes from</h2>
-          <p className="mt-2 leading-relaxed text-ink-600">
-            Every requirement in NameDay traces back to an official source, and each task shows
+          <h2 className="text-2xl text-charcoal-900">Where our information comes from</h2>
+          <p className="mt-2 leading-relaxed text-charcoal-700">
+            Every requirement in AfterIDo traces back to an official source, and each task shows
             the date its guidance was last checked. Where we haven’t verified something — a state
             we haven’t researched yet — we say so instead of guessing. Every outbound link goes
             to a government agency or the company itself, never an affiliate.
           </p>
-          <p className="mt-3 leading-relaxed text-ink-600">
+          <p className="mt-3 leading-relaxed text-charcoal-700">
             Requirements change without notice. The agency’s own page is always authoritative, and
-            NameDay tells you to confirm there before you file.
+            AfterIDo tells you to confirm there before you file.
           </p>
         </section>
 
-        <section className="border-t border-ink-100 pt-6">
-          <h2 className="text-lg text-ink-900">Legal</h2>
-          <p className="mt-2 text-sm leading-relaxed text-ink-500">{DISCLAIMER_TEXT}</p>
-          <p className="mt-3 text-sm leading-relaxed text-ink-500">
-            Nothing in NameDay is legal, tax or financial advice. Decisions about property deeds,
+        <section className="border-t border-charcoal-100 pt-6">
+          <h2 className="text-lg text-charcoal-900">Legal</h2>
+          <p className="mt-2 text-sm leading-relaxed text-charcoal-500">{DISCLAIMER_TEXT}</p>
+          <p className="mt-3 text-sm leading-relaxed text-charcoal-500">
+            Nothing in AfterIDo is legal, tax or financial advice. Decisions about property deeds,
             wills, beneficiary designations and tax filing status should be made with a qualified
             professional.
           </p>

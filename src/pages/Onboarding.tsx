@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, Info, Lock } from 'lucide-react';
 import type { CircumstanceId, NameChangeKind, Profile, StateCode } from '@/types';
 import { useApp } from '@/store/AppContext';
-import { Wordmark } from '@/components/Wordmark';
+import { WordmarkLink } from '@/components/Wordmark';
 import {
   Button,
   Callout,
@@ -102,17 +102,17 @@ export function Onboarding() {
   const err = (key: string) => (touched ? errors[key] : undefined);
 
   return (
-    <div className="min-h-dvh bg-paper">
-      <header className="border-b border-ink-100 bg-paper-raised">
+    <div className="min-h-dvh bg-canvas">
+      <header className="border-b border-charcoal-100 bg-surface">
         <div className="container-page flex h-16 items-center justify-between">
-          <Wordmark />
-          <p className="text-sm text-ink-500">
+          <WordmarkLink />
+          <p className="text-sm text-charcoal-500">
             Step {index + 1} of {STEPS.length}
           </p>
         </div>
-        <div className="h-1 w-full bg-ink-100">
+        <div className="h-1 w-full bg-charcoal-100">
           <div
-            className="h-full bg-rose-600 transition-[width] duration-500 ease-out"
+            className="h-full bg-primary-600 transition-[width] duration-500 ease-out"
             style={{ width: `${((index + 1) / STEPS.length) * 100}%` }}
           />
         </div>
@@ -122,6 +122,7 @@ export function Onboarding() {
         <div key={step.id} className="animate-rise">
           {step.id === 'you' && (
             <StepShell
+              welcome="Welcome to the easiest way to update your name after ‘I do’."
               title="Let’s start with your name today"
               intro="This is the name that’s currently on your license, your bank account and your Social Security record."
             >
@@ -255,7 +256,7 @@ export function Onboarding() {
               </div>
 
               {profile.address.state && (
-                <Callout tone="rose" className="mt-6">
+                <Callout tone="primary" className="mt-6">
                   We’ll tailor your license, voting and professional-licensing steps to{' '}
                   <strong>{US_STATES.find((s) => s.code === profile.address.state)?.name}</strong>.
                 </Callout>
@@ -292,18 +293,18 @@ export function Onboarding() {
               </div>
 
               {fullName(profile.newName).trim().length > 0 && (
-                <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-center">
-                  <p className="text-xs uppercase tracking-[0.14em] text-rose-600">
+                <div className="mt-5 rounded-2xl border border-primary-200 bg-primary-50 px-5 py-4 text-center">
+                  <p className="text-xs uppercase tracking-[0.14em] text-primary-600">
                     Your new legal name
                   </p>
-                  <p className="mt-1 font-display text-2xl text-ink-900">
+                  <p className="mt-1 font-display text-2xl text-charcoal-900">
                     {fullName(profile.newName)}
                   </p>
                 </div>
               )}
 
               <fieldset className="mt-8">
-                <legend className="mb-3 text-sm font-medium text-ink-700">
+                <legend className="mb-3 text-sm font-medium text-charcoal-700">
                   How did your name change?
                 </legend>
                 <div className="space-y-2.5">
@@ -330,7 +331,7 @@ export function Onboarding() {
                 </Field>
               )}
 
-              <Callout tone="amber" icon={<Info size={16} />} className="mt-6">
+              <Callout tone="champagne" icon={<Info size={16} />} className="mt-6">
                 A marriage certificate covers taking or hyphenating a spouse’s surname in most
                 states. Inventing a brand-new last name sometimes requires a court order instead
                 — check with your county clerk before you file anything.
@@ -417,7 +418,7 @@ export function Onboarding() {
               </Field>
 
               <Callout
-                tone={profile.marriage.certifiedCopies >= 3 ? 'sage' : 'amber'}
+                tone={profile.marriage.certifiedCopies >= 3 ? 'success' : 'champagne'}
                 className="mt-5"
               >
                 <p className="font-semibold">Why certified copies matter</p>
@@ -449,9 +450,9 @@ export function Onboarding() {
                 ))}
               </div>
 
-              <p className="mt-6 rounded-2xl bg-paper-sunk px-5 py-4 text-center text-sm text-ink-600">
+              <p className="mt-6 rounded-2xl bg-surface-sunk px-5 py-4 text-center text-sm text-charcoal-700">
                 Your checklist so far:{' '}
-                <strong className="font-display text-lg text-rose-600">{taskCount}</strong> tasks
+                <strong className="font-display text-lg text-primary-600">{taskCount}</strong> tasks
               </p>
             </StepShell>
           )}
@@ -461,7 +462,7 @@ export function Onboarding() {
               title="Here’s what we have"
               intro="Check it over. You can change any of this later from your profile."
             >
-              <Card className="divide-y divide-ink-100">
+              <Card className="divide-y divide-charcoal-100">
                 <ReviewRow label="Current name" value={fullName(profile.currentName)} />
                 <ReviewRow label="New legal name" value={fullName(profile.newName)} emphasis />
                 <ReviewRow
@@ -487,10 +488,10 @@ export function Onboarding() {
                 />
               </Card>
 
-              <div className="mt-6 rounded-card border border-rose-200 bg-rose-50 p-6 text-center">
-                <p className="text-sm text-ink-600">Your personalized plan is ready</p>
-                <p className="mt-1 font-display text-3xl text-ink-900">{taskCount} tasks</p>
-                <p className="mt-1 text-sm text-ink-500">
+              <div className="mt-6 rounded-card border border-primary-200 bg-primary-50 p-6 text-center">
+                <p className="text-sm text-charcoal-700">Your personalized plan is ready</p>
+                <p className="mt-1 font-display text-3xl text-charcoal-900">{taskCount} tasks</p>
+                <p className="mt-1 text-sm text-charcoal-500">
                   sequenced in the order that actually works
                 </p>
               </div>
@@ -500,7 +501,7 @@ export function Onboarding() {
       </main>
 
       {/* Sticky action bar — always in thumb reach on mobile */}
-      <div className="safe-bottom fixed inset-x-0 bottom-0 border-t border-ink-100 bg-paper-raised/95 backdrop-blur-md">
+      <div className="safe-bottom fixed inset-x-0 bottom-0 border-t border-charcoal-100 bg-surface/95 backdrop-blur-md">
         <div className="container-page flex max-w-2xl items-center justify-between gap-3 py-3.5">
           <Button variant="ghost" onClick={back}>
             <ArrowLeft size={16} />
@@ -508,7 +509,7 @@ export function Onboarding() {
           </Button>
           <div className="flex items-center gap-3">
             {touched && !canAdvance && (
-              <span className="hidden text-xs text-clay-600 sm:block">
+              <span className="hidden text-xs text-destructive-600 sm:block">
                 A few fields still need you
               </span>
             )}
@@ -540,18 +541,25 @@ export function Onboarding() {
 }
 
 function StepShell({
+  welcome,
   title,
   intro,
   children,
 }: {
+  welcome?: string;
   title: string;
   intro: string;
   children: React.ReactNode;
 }) {
   return (
     <div>
-      <h1 className="text-balance text-3xl text-ink-900 sm:text-4xl">{title}</h1>
-      <p className="mt-3 text-pretty leading-relaxed text-ink-600">{intro}</p>
+      {welcome && (
+        <p className="mb-4 rounded-2xl bg-champagne-100 px-4 py-3 text-sm leading-relaxed text-charcoal-900">
+          {welcome}
+        </p>
+      )}
+      <h1 className="text-balance text-3xl text-charcoal-900 sm:text-4xl">{title}</h1>
+      <p className="mt-3 text-pretty leading-relaxed text-charcoal-700">{intro}</p>
       <div className="mt-8">{children}</div>
     </div>
   );
@@ -568,11 +576,11 @@ function ReviewRow({
 }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 py-3">
-      <span className="text-sm text-ink-500">{label}</span>
+      <span className="text-sm text-charcoal-500">{label}</span>
       <span
         className={cx(
           'text-right',
-          emphasis ? 'font-display text-lg text-rose-700' : 'text-ink-900',
+          emphasis ? 'font-display text-lg text-primary-700' : 'text-charcoal-900',
         )}
       >
         {value.trim() || '—'}
