@@ -178,6 +178,21 @@ color in one and change it in the other.
 Headings are Playfair Display, body and UI are Inter, both from Google Fonts with
 a system fallback stack.
 
+### Logo asset
+
+`src/assets/afterido-wordmark.png` is the official logo, trimmed to its artwork
+bounds with the cream paper field keyed to transparency, so it composites on any
+surface rather than punching a rectangle into tinted ones. The key combines a
+luminance test (for the charcoal lettering) with a chroma test (for the rose-gold
+ring and ribbon, which sit close to the paper in brightness but are far more
+saturated).
+
+The asset is **1.56:1** — the ring and stone sit above the name, so roughly half
+the image height is mark rather than wordmark. `Wordmark`'s size steps are about
+double what a text-only lockup would use; shrink them and the name stops being
+readable. The lettering is charcoal, so place it on white or champagne — on a dark
+ground only the rose-gold survives.
+
 The numbered steps around each brand color (`primary-50` … `primary-700`) are
 tints and shades derived for surfaces, borders and hover states — a UI needs more
 than eight values. The **unnumbered token is always the exact brand hex**, and
