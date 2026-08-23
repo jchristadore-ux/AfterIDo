@@ -3,11 +3,17 @@ import wordmark from '@/assets/afterido-wordmark.png';
 import { AfterIDoBrand } from '@/brand';
 import { cx } from './ui';
 
+/**
+ * Heights are tuned to the asset's 1.56:1 aspect. The ring and diamond sit
+ * above the wordmark, so roughly half the image height is the mark rather than
+ * the name — a height that reads well for a plain wordmark leaves this one
+ * illegible. Every step is about double what a text-only lockup would use.
+ */
 const HEIGHT = {
-  sm: 'h-6', // mobile header
-  md: 'h-8', // desktop header, footer
-  lg: 'h-12', // onboarding, about
-  xl: 'h-16 sm:h-20', // splash, landing hero
+  sm: 'h-10', // mobile header
+  md: 'h-12', // desktop header, footer
+  lg: 'h-20', // onboarding, about
+  xl: 'h-28 sm:h-36', // splash, landing hero
 } as const;
 
 export type WordmarkSize = keyof typeof HEIGHT;
@@ -15,9 +21,13 @@ export type WordmarkSize = keyof typeof HEIGHT;
 /**
  * The AfterIDo wordmark.
  *
- * The source asset is the official logo, trimmed to its ink bounds with the
- * white field keyed to transparency so it composites on any surface rather
- * than punching a white rectangle into tinted ones.
+ * The source asset is the official logo, trimmed to its artwork bounds with the
+ * cream paper field keyed to transparency so it composites on any surface
+ * rather than punching a rectangle into tinted ones.
+ *
+ * Note the wordmark itself is charcoal: place it on white, champagne or another
+ * light surface. On a dark ground the lettering disappears and only the
+ * rose-gold ring survives.
  */
 export function Wordmark({
   size = 'md',
@@ -54,11 +64,12 @@ export function WordmarkLink({
 }
 
 /**
- * App-icon mark: the "A" and the rose-gold curve that runs under the wordmark,
- * squared off for a tile. Used for the favicon and as the basis for the app
- * icon, where the full wordmark would be illegible.
+ * App-icon mark: the rose-gold ring and diamond from the logo, with the ribbon
+ * running through it. Used for the favicon and as the basis for the app icon,
+ * where the full wordmark would be illegible.
  */
 export function AppIcon({ size = 40, className }: { size?: number; className?: string }) {
+  const gold = AfterIDoBrand.colors.primary;
   return (
     <svg
       width={size}
@@ -78,21 +89,17 @@ export function AppIcon({ size = 40, className }: { size?: number; className?: s
         strokeWidth="1"
         opacity="0.12"
       />
-      <text
-        x="32"
-        y="41"
-        textAnchor="middle"
-        fontFamily="'Playfair Display', Georgia, serif"
-        fontSize="34"
-        fill={AfterIDoBrand.colors.text}
-      >
-        A
-      </text>
+      {/* Band */}
+      <circle cx="32" cy="38" r="14" fill="none" stroke={gold} strokeWidth="3.2" />
+      {/* Stone */}
+      <path d="M25 17 L29 11 L35 11 L39 17 L32 27 Z" fill={gold} />
+      <path d="M25 17 H39 M29 11 L32 27 M35 11 L32 27" stroke="#fff" strokeWidth="0.9" opacity="0.65" fill="none" />
+      {/* Ribbon, crossing the band the way it does in the wordmark */}
       <path
-        d="M8 46 C 20 60, 30 34, 42 44 S 56 50, 58 44"
+        d="M5 47 C 15 40, 22 54, 32 49 S 49 40, 59 46"
         fill="none"
-        stroke={AfterIDoBrand.colors.primary}
-        strokeWidth="3.5"
+        stroke={gold}
+        strokeWidth="3"
         strokeLinecap="round"
       />
     </svg>
