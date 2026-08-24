@@ -32,7 +32,7 @@
       "binding": "DB",
       "database_name": "afterido",
       // Replaced by the id that `wrangler d1 create afterido` prints.
-      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+      "database_id": "93927d1f-c062-419a-b1a4-60dda795d645",
       "migrations_dir": "migrations"
     }
   ],
@@ -44,10 +44,10 @@
     // Public, non-secret configuration. Secrets are set with
     // `wrangler secret put NAME` and never appear in this file:
     //   SESSION_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY
-    "PUBLIC_ORIGIN": "",
+    "PUBLIC_ORIGIN": "http://after-i-do.com",
     "STRIPE_PRICE_ID": "",
-    "EMAIL_FROM": "",
-    "SUPPORT_EMAIL": "support@example.com",
+    "EMAIL_FROM": "AfterIDo <hello@after-i-do.com>"",
+    "SUPPORT_EMAIL": "jchristadore@gmail.com",
     "PRICE_LABEL": "$19.99"
   },
 
