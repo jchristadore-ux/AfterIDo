@@ -25,7 +25,22 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Crect%20width%3D%2764%27%20height%3D%2764%27%20rx%3D%2714%27%20fill%3D%27%23FFFFFF%27%2F%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2738%27%20r%3D%2714%27%20fill%3D%27none%27%20stroke%3D%27%23D4A5A5%27%20stroke-width%3D%273.4%27%2F%3E%3Cpath%20d%3D%27M25%2017%20L29%2011%20L35%2011%20L39%2017%20L32%2027%20Z%27%20fill%3D%27%23D4A5A5%27%2F%3E%3Cpath%20d%3D%27M5%2047%20C%2015%2040%2C%2022%2054%2C%2032%2049%20S%2049%2040%2C%2059%2046%27%20fill%3D%27none%27%20stroke%3D%27%23D4A5A5%27%20stroke-width%3D%273%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E"
     />
+    <!--
+      Home screen. An SVG favicon does not cover this: iOS needs a real PNG
+      apple-touch-icon, and Android reads the icons out of the web manifest.
+      Without both, Chrome invents a tile from the first letter of the title.
+
+      %BASE_URL% is substituted by Vite, so these stay correct whether the app
+      is served from the domain root or a project subpath. They must be
+      base-absolute rather than relative — a deep link like /app/checklist is
+      served the same HTML, and a relative href would resolve against /app/.
+    -->
+    <link rel="apple-touch-icon" href="%BASE_URL%apple-touch-icon.png" />
+    <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
     <meta name="apple-mobile-web-app-title" content="AfterIDo" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   </head>
   <body>
     <div id="root"></div>
