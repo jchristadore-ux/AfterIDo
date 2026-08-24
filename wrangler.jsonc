@@ -58,7 +58,7 @@
 
     // From Stripe, once the product exists. Payments stay switched off, and
     // the UI says so, until this is filled in.
-    "STRIPE_PRICE_ID": "",
+    "STRIPE_PRICE_ID": "prod_V8Gkb96HlvX2Vk",
 
     // Shown publicly on the Contact page and in the legal pages, so choose it
     // deliberately — this is the address real customers will write to about
