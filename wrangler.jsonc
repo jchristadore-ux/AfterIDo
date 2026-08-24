@@ -46,7 +46,7 @@
     //   SESSION_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY
     "PUBLIC_ORIGIN": "http://after-i-do.com",
     "STRIPE_PRICE_ID": "",
-    "EMAIL_FROM": "AfterIDo <hello@after-i-do.com>"",
+    "EMAIL_FROM": "AfterIDo <hello@after-i-do.com>",
     "SUPPORT_EMAIL": "jchristadore@gmail.com",
     "PRICE_LABEL": "$19.99"
   },
