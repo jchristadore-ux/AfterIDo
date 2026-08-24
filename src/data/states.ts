@@ -1,4 +1,5 @@
 import type { OfficialLink, StateCode, StateProfile, StateTaskGuidance } from '@/types';
+import { stateSlug } from '@shared/seo';
 
 /**
  * State-specific requirements.
@@ -274,3 +275,27 @@ export function getStateTaskGuidance(
 export const DETAILED_STATES: StateCode[] = Object.values(STATE_GUIDANCE)
   .filter((s): s is StateProfile => !!s && s.coverage === 'detailed')
   .map((s) => s.code);
+
+// ---------------------------------------------------------------------------
+// URL slugs, for the public state guides
+// ---------------------------------------------------------------------------
+
+/**
+ * /name-change-after-marriage/new-jersey and friends.
+ *
+ * Derived from the state names rather than hand-written, so a slug can never
+ * drift from the state it names. `stateSlug` lives in shared/ because the
+ * Worker needs it too, for the sitemap and for link previews.
+ */
+export const STATE_SLUG: Record<StateCode, string> = Object.fromEntries(
+  US_STATES.map((s) => [s.code, stateSlug(s.name)]),
+) as Record<StateCode, string>;
+
+export const STATE_BY_SLUG: Record<string, StateCode> = Object.fromEntries(
+  US_STATES.map((s) => [stateSlug(s.name), s.code]),
+);
+
+export function stateNameForSlug(slug: string): string | null {
+  const code = STATE_BY_SLUG[slug];
+  return code ? STATE_NAME[code] : null;
+}

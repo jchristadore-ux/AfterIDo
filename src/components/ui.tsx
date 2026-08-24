@@ -46,7 +46,7 @@ const DISABLED =
 
 const VARIANT: Record<Variant, string> = {
   primary: `bg-primary text-white font-semibold border border-transparent shadow-button hover:bg-primary-600 active:bg-primary-700 ${DISABLED}`,
-  secondary: `bg-white text-primary border border-primary shadow-soft hover:bg-primary-50 active:bg-primary-100 ${DISABLED}`,
+  secondary: `bg-white text-primary-800 border border-primary-600 shadow-soft hover:bg-primary-50 active:bg-primary-100 ${DISABLED}`,
   success: `bg-sage text-white font-semibold border border-transparent shadow-soft hover:bg-sage-600 active:bg-sage-700 ${DISABLED}`,
   ghost: 'text-charcoal-700 border border-transparent hover:bg-surface-sunk hover:text-charcoal-900 disabled:text-disabled-text',
   destructive: `bg-white text-destructive border border-destructive shadow-soft hover:bg-destructive-50 active:bg-destructive-100 ${DISABLED}`,
@@ -548,12 +548,15 @@ export function CopyButton({
   className,
   size = 'sm',
   variant = 'secondary',
+  onCopied,
 }: {
   value: string;
   label?: string;
   className?: string;
   size?: Size;
   variant?: Variant;
+  /** Fired after a successful copy — used for analytics, never for the value. */
+  onCopied?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const timer = useRef<number | undefined>(undefined);
@@ -580,6 +583,7 @@ export function CopyButton({
       document.body.removeChild(ta);
     }
     setCopied(true);
+    onCopied?.();
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setCopied(false), 1600);
   }

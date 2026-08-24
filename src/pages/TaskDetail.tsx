@@ -20,6 +20,7 @@ import { useApp } from '@/store/AppContext';
 import { PRIORITY_LABEL, isSettled } from '@/lib/progress';
 import { formatMinutes, relativeDay } from '@/lib/format';
 import { REMINDER_PRESETS, remindInDays } from '@/lib/notifications';
+import { track } from '@/lib/analytics';
 import { notificationLetter } from '@/lib/prefill';
 import { getStateProfile } from '@/data/states';
 import {
@@ -274,16 +275,31 @@ export function TaskDetail() {
       <section>
         <SectionHeading title="What to do" className="mb-3" />
         <Card className="p-5">
-          <ol className="space-y-4">
-            {task.steps.map((s, i) => (
-              <li key={s} className="flex gap-3.5">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-charcoal-900 text-xs font-semibold text-white">
-                  {i + 1}
-                </span>
-                <span className="pt-0.5 leading-relaxed text-charcoal-700">{s}</span>
-              </li>
-            ))}
-          </ol>
+          {task.steps.length > 0 ? (
+            <ol className="space-y-4">
+              {task.steps.map((s, i) => (
+                <li key={s} className="flex gap-3.5">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-charcoal-900 text-xs font-semibold text-white">
+                    {i + 1}
+                  </span>
+                  <span className="pt-0.5 leading-relaxed text-charcoal-700">{s}</span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            // A task the user added herself. We were not told how this
+            // organization handles a name change, so we do not invent steps —
+            // we give her the details to hand over and get out of the way.
+            <p className="leading-relaxed text-charcoal-700">
+              You added this one, so we don’t have their process. Contact them, say your legal name
+              has changed after marriage, and have a certified copy of your marriage certificate
+              ready. Your details are below, ready to paste — and the{' '}
+              <Link to="/app/letters" className="underline underline-offset-2">
+                general notification letter
+              </Link>{' '}
+              covers most organizations.
+            </p>
+          )}
         </Card>
       </section>
 
@@ -424,6 +440,7 @@ export function TaskDetail() {
             size="lg"
             onClick={() => {
               setStatus(task.id, 'complete');
+              track('task_completed', { category: task.category });
               // The dashboard reads this to show the milestone message once.
               navigate('/app', { state: { justUpdated: task.title } });
             }}

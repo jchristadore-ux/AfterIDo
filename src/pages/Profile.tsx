@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Check, RotateCcw, Save, ShieldCheck, Sparkles } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Check, RotateCcw, Save, ShieldCheck } from 'lucide-react';
 import type { CircumstanceId, Profile as ProfileType, StateCode } from '@/types';
 import { useApp } from '@/store/AppContext';
 import { CIRCUMSTANCES } from '@/data/categories';
@@ -9,6 +9,8 @@ import { tasksForProfile } from '@/data/tasks';
 import { formatPhone, fullName } from '@/lib/format';
 import { AfterIDoBrand, APP_VERSION } from '@/brand';
 import { Wordmark } from '@/components/Wordmark';
+import { AccountPanel } from '@/components/AccountPanel';
+import { CustomTasks } from '@/components/CustomTasks';
 import {
   Button,
   Callout,
@@ -22,7 +24,7 @@ import {
 } from '@/components/ui';
 
 export function Profile() {
-  const { state, setProfile, setPlan, reset } = useApp();
+  const { state, setProfile, reset } = useApp();
   const navigate = useNavigate();
   const [draft, setDraft] = useState<ProfileType>(state.profile);
   const [saved, setSaved] = useState(false);
@@ -309,37 +311,20 @@ export function Profile() {
         </p>
       </section>
 
-      {/* --------------------------------------------------------- Plan */}
-      <section>
-        <SectionHeading title="Your plan" className="mb-3" />
-        <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
-          <div>
-            <p className="font-medium text-charcoal-900">
-              {state.plan === 'premium' ? 'Premium' : 'Free'}
-            </p>
-            <p className="text-sm text-charcoal-500">
-              {state.plan === 'premium'
-                ? 'State guidance, packet, letters, vault and reminders are unlocked.'
-                : 'Checklist and prefill. Upgrade for the packet, vault and reminders.'}
-            </p>
-          </div>
-          {state.plan === 'premium' ? (
-            <Button variant="secondary" size="sm" onClick={() => setPlan('free')}>
-              Switch to Free
-            </Button>
-          ) : (
-            <Button size="sm" onClick={() => setPlan('premium')}>
-              <Sparkles size={14} /> Unlock preview
-            </Button>
-          )}
-        </Card>
-      </section>
+      {/* --------------------------------------------- Plan and account */}
+      <AccountPanel />
+
+      {/* ------------------------------------------------- Custom tasks */}
+      <CustomTasks />
 
       {/* -------------------------------------------------------- Privacy */}
       <Callout tone="success" icon={<ShieldCheck size={16} />} title="Your information">
-        Everything on this page is stored only in this browser. We never ask for your Social
-        Security number, license number or account numbers, and nothing here is transmitted
-        anywhere in this build.
+        Everything on this page is stored in this browser and is never sent to us. We never ask
+        for your Social Security number, license number, account numbers or any password — they
+        aren’t in the app at all.{' '}
+        <Link to="/privacy" className="underline underline-offset-2">
+          Privacy policy
+        </Link>
       </Callout>
 
       {/* ---------------------------------------------------------- About */}

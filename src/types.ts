@@ -175,6 +175,12 @@ export interface TaskDefinition {
   premium?: boolean;
   /** Shown verbatim; keeps us honest about where the facts came from. */
   sourceNote?: string;
+  /**
+   * True for a task the user added herself. It carries no steps and no links,
+   * because we were not told how her gym handles a name change and will not
+   * invent it — the UI shows a plainer detail screen for these.
+   */
+  isCustom?: boolean;
 }
 
 export interface TaskState {
@@ -268,11 +274,17 @@ export interface StoredDocument {
 
 export type Plan = 'free' | 'premium';
 
+/**
+ * Note what is absent: the plan.
+ *
+ * An entitlement stored in the browser is an entitlement the browser can
+ * grant itself. Premium comes from the server, through AccountContext, and
+ * nothing here can override it.
+ */
 export interface AppState {
   version: number;
   onboarded: boolean;
   demoMode: boolean;
-  plan: Plan;
   profile: Profile;
   tasks: Record<string, TaskState>;
   documents: StoredDocument[];

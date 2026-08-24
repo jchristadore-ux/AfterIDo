@@ -21,7 +21,12 @@ import type { AppState, Profile } from '@/types';
  */
 
 const STORAGE_KEY = 'afterido.state.v1';
-const STATE_VERSION = 1;
+/**
+ * 1 → 2 removed the `plan` field. It used to be settable from the browser,
+ * which meant Premium was settable from the browser. Entitlement now comes
+ * from the server and `migrate` drops any copy left behind on the device.
+ */
+const STATE_VERSION = 2;
 
 export const EMPTY_PROFILE: Profile = {
   currentName: { first: '', middle: '', last: '' },
@@ -40,7 +45,6 @@ export const EMPTY_STATE: AppState = {
   version: STATE_VERSION,
   onboarded: false,
   demoMode: false,
-  plan: 'free',
   profile: EMPTY_PROFILE,
   tasks: {},
   documents: [],
@@ -94,7 +98,10 @@ export const localAdapter: PersistenceAdapter = {
  * Real migrations would branch on `version`; this keeps the demo forgiving.
  */
 function migrate(old: Partial<AppState>): AppState {
-  return reconcile({ ...EMPTY_STATE, ...old, version: STATE_VERSION });
+  // Drop fields newer builds no longer recognise rather than carrying them
+  // forward — `plan` in particular must not survive, see STATE_VERSION.
+  const { plan: _droppedPlan, ...carried } = old as Partial<AppState> & { plan?: unknown };
+  return reconcile({ ...EMPTY_STATE, ...carried, version: STATE_VERSION });
 }
 
 function reconcile(state: AppState): AppState {

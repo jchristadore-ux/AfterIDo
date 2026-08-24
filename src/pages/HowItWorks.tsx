@@ -1,5 +1,7 @@
 import { ArrowRight, Check, Lock } from 'lucide-react';
 import { MarketingShell } from '@/components/MarketingShell';
+import { Seo } from '@/components/Seo';
+import { PAGE_META } from '@shared/seo';
 import { Callout, Card, LinkButton } from '@/components/ui';
 import { PHASES, TASKS, phaseForStep } from '@/data/tasks';
 import { CATEGORIES } from '@/data/categories';
@@ -12,6 +14,11 @@ export function HowItWorks() {
       title="One profile. One order. One list that knows what’s left."
       intro="AfterIDo isn’t a filing service and doesn’t pretend to be. It’s the thing that turns a month of research into an afternoon of tasks."
     >
+      <Seo
+        title={PAGE_META['/how-it-works'].title}
+        description={PAGE_META['/how-it-works'].description}
+      />
+
       <div className="space-y-14">
         {/* ------------------------------------------------------ The order */}
         <section>

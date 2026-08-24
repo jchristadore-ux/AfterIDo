@@ -3,10 +3,15 @@ import type { Plan } from '@/types';
 /**
  * Plans and entitlements.
  *
- * There is no payment processing in this build and no code path that takes
- * money. What exists is the seam: features ask `canUse(plan, feature)`, so
- * wiring Stripe later means implementing `startCheckout` and setting the plan
- * from a verified webhook rather than touching feature code.
+ * ── One rule ──────────────────────────────────────────────────────────────
+ * No feature checks a plan directly. Everything asks `canUse(plan, feature)`,
+ * which means moving a feature between tiers is one line in the table below
+ * and nothing else — no hunting through components for `plan === 'premium'`.
+ *
+ * ── Where `plan` comes from ───────────────────────────────────────────────
+ * The server, via AccountContext. Not from here, and not from localStorage.
+ * This file decides what a plan *entitles* you to; it never decides which plan
+ * you have. Buying happens in worker/index.ts, where Stripe can be asked.
  */
 
 export type FeatureId =
@@ -17,6 +22,7 @@ export type FeatureId =
   | 'letters'
   | 'documents'
   | 'reminders'
+  | 'custom-tasks'
   | 'household';
 
 const ENTITLEMENTS: Record<Plan, FeatureId[]> = {
@@ -29,6 +35,7 @@ const ENTITLEMENTS: Record<Plan, FeatureId[]> = {
     'letters',
     'documents',
     'reminders',
+    'custom-tasks',
   ],
 };
 
@@ -71,11 +78,14 @@ export const PLAN_TIERS: PlanTier[] = [
     tagline: 'Everything prepared for you, and somewhere to keep it.',
     features: [
       'Everything in Free',
+      'The complete roadmap — financial, insurance, travel and personal',
       'State-specific guidance for your state',
-      'Printable name-change packet',
       'Ready-to-send notification letters',
-      'Document vault',
-      'Reminders',
+      'Document checklists and a vault to track them',
+      'A printable packet for the counter',
+      'Email reminders',
+      'Your own custom tasks',
+      'A dated completion record when you finish',
     ],
     available: true,
     highlight: true,
@@ -95,14 +105,3 @@ export const PLAN_TIERS: PlanTier[] = [
     available: false,
   },
 ];
-
-/**
- * INTEGRATION POINT — payments.
- *
- * Production: create a Checkout Session server-side, redirect here, and grant
- * the entitlement only from a signed `checkout.session.completed` webhook.
- * Never from the browser's success redirect — that is trivially forged.
- */
-export async function startCheckout(): Promise<{ ok: false; reason: string }> {
-  return { ok: false, reason: 'Payments are not enabled in this build.' };
-}

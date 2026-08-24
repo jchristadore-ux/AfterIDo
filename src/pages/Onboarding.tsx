@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, Info, Lock } from 'lucide-react';
 import type { CircumstanceId, NameChangeKind, Profile, StateCode } from '@/types';
 import { useApp } from '@/store/AppContext';
+import { useAccount } from '@/store/AccountContext';
+import { Seo } from '@/components/Seo';
 import { WordmarkLink } from '@/components/Wordmark';
+import { track } from '@/lib/analytics';
 import {
   Button,
   Callout,
@@ -57,6 +60,7 @@ const STEPS: { id: StepId; label: string }[] = [
 
 export function Onboarding() {
   const { state, completeOnboarding } = useApp();
+  const { config, account } = useAccount();
   const navigate = useNavigate();
   const [index, setIndex] = useState(0);
   const [profile, setProfile] = useState<Profile>(state.profile);
@@ -64,6 +68,10 @@ export function Onboarding() {
 
   const step = STEPS[index];
   const isLast = index === STEPS.length - 1;
+
+  useEffect(() => {
+    track('onboarding_started');
+  }, []);
 
   const errors = validate(step.id, profile);
   const canAdvance = Object.keys(errors).length === 0;
@@ -82,7 +90,11 @@ export function Onboarding() {
     setTouched(false);
     if (isLast) {
       completeOnboarding(profile);
-      navigate('/app');
+      track('onboarding_completed');
+      // The one screen between here and the dashboard, and only when it can
+      // do something: an account offer needs a server, and someone already
+      // signed in has no use for it. It is skippable either way.
+      navigate(config.accounts && !account ? '/create-account?next=%2Fapp' : '/app');
       return;
     }
     setIndex((i) => i + 1);
@@ -103,6 +115,7 @@ export function Onboarding() {
 
   return (
     <div className="min-h-dvh bg-canvas">
+      <Seo title="Start your name change" noindex />
       <header className="border-b border-charcoal-100 bg-surface">
         <div className="container-page flex h-16 items-center justify-between">
           <WordmarkLink />

@@ -28,7 +28,6 @@ export const DEMO_STATE: AppState = {
   ...EMPTY_STATE,
   onboarded: true,
   demoMode: true,
-  plan: 'premium',
   profile: {
     currentName: { first: 'Sarah', middle: 'Elizabeth', last: 'Johnson' },
     newName: { first: 'Sarah', middle: 'Elizabeth', last: 'Smith' },
