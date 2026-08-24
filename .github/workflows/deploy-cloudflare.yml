@@ -5,10 +5,13 @@ name: Deploy to Cloudflare
 # possible — GitHub Pages is static, so it can host the app but cannot verify
 # a Stripe webhook.
 #
-# It only runs once the two repository secrets exist, so it is inert until you
-# follow the Cloudflare steps in LAUNCH_GUIDE.md:
-#   CLOUDFLARE_API_TOKEN  — a token with "Edit Cloudflare Workers"
-#   CLOUDFLARE_ACCOUNT_ID — from the Workers & Pages page
+# It stays inert until one repository secret exists, so nothing breaks while
+# the Cloudflare setup in LAUNCH_GUIDE.md is half-finished:
+#
+#   CLOUDFLARE_API_TOKEN — a token with the "Edit Cloudflare Workers" template
+#
+# The account id is not a secret (it appears in every dashboard URL) and lives
+# in wrangler.jsonc.
 
 on:
   push:
@@ -25,17 +28,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check for Cloudflare credentials
+      - name: Check for the Cloudflare token
         id: creds
         env:
           TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if [ -n "$TOKEN" ] && [ -n "$ACCOUNT" ]; then
+          if [ -n "$TOKEN" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Cloudflare secrets are not set yet — skipping. See LAUNCH_GUIDE.md."
+            echo "::notice::CLOUDFLARE_API_TOKEN is not set yet — skipping deploy. See LAUNCH_GUIDE.md."
           fi
 
       - uses: actions/setup-node@v4
@@ -48,21 +50,25 @@ jobs:
         if: steps.creds.outputs.ready == 'true'
         run: npm ci
 
-      # No VITE_BASE here: the Worker serves the app from the domain root.
+      # No VITE_BASE: the Worker serves the app from the domain root.
+      # VITE_SITE_ORIGIN only affects the generated sitemap, which needs
+      # absolute URLs.
       - name: Build
         if: steps.creds.outputs.ready == 'true'
+        env:
+          VITE_SITE_ORIGIN: https://after-i-do.com
         run: npm run build
 
+      # Runs before the deploy, so the schema is never behind the code that
+      # queries it. Migrations are additive and re-running one is a no-op.
       - name: Apply database migrations
         if: steps.creds.outputs.ready == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx --yes wrangler@4 d1 migrations apply afterido --remote
 
       - name: Deploy
         if: steps.creds.outputs.ready == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx --yes wrangler@4 deploy
