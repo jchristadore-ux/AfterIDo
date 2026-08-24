@@ -3,8 +3,20 @@
 Written for someone who is not a developer. No command line, no code. Every
 step is a website you log into and a form you fill in.
 
-Read it once end to end before you start anything — it will make more sense
-than doing it a step at a time.
+Read it once end to end before you start — it will make more sense than doing
+it a step at a time.
+
+---
+
+## Already done
+
+| | |
+|---|---|
+| Domain | **after-i-do.com** ✅ purchased |
+| Cloudflare account | ✅ `ff4b01fbc362a9e794842a52c0ce2996` |
+| `wrangler.jsonc` | ✅ pre-filled with your account and domain |
+
+Three things are left: the database, Stripe, and email.
 
 ---
 
@@ -14,8 +26,8 @@ Two versions of AfterIDo exist, and it helps to keep them straight:
 
 | | The preview | The real site |
 |---|---|---|
-| Where | github.io (already live) | Cloudflare (you'll set this up) |
-| Address | `jchristadore-ux.github.io/AfterIDo/` | your own domain |
+| Where | github.io (already live) | Cloudflare |
+| Address | `jchristadore-ux.github.io/AfterIDo/` | **after-i-do.com** |
 | Free features | Work | Work |
 | Accounts | No | Yes |
 | Can take payment | **No** | **Yes** |
@@ -23,9 +35,8 @@ Two versions of AfterIDo exist, and it helps to keep them straight:
 The preview is honest about this. It doesn't show a broken "Buy" button — the
 Premium page says plainly that it isn't connected to a payment processor.
 
-**Nothing in this guide is optional if you want to charge money.** A website
-that only serves files — which is what the preview is — cannot verify a payment.
-It has nowhere to check anything. That is why the real site needs Cloudflare.
+**Nothing here is optional if you want to charge money.** A site that only
+serves files — which is what the preview is — has nowhere to verify a payment.
 
 ---
 
@@ -33,156 +44,127 @@ It has nowhere to check anything. That is why the real site needs Cloudflare.
 
 | | Monthly | Yearly |
 |---|---|---|
-| Cloudflare Workers (hosting + the API) | **$0** | $0 |
-| Cloudflare D1 (the database) | **$0** | $0 |
+| Cloudflare Workers (hosting + API) | **$0** | $0 |
+| Cloudflare D1 (database) | **$0** | $0 |
 | Accounts / sign-in (built in) | **$0** | $0 |
 | Analytics (built in) | **$0** | $0 |
-| Resend (sending email) | **$0** | $0 |
+| Resend (email) | **$0** | $0 |
 | Stripe | **$0** | $0 |
-| Your domain name | — | **$10–20** |
-| **Total** | **$0/month** | **$10–20/year** |
+| after-i-do.com | — | ~$10 |
+| **Total** | **$0/month** | **~$10/year** |
 
-**Startup cost: the price of a domain name. Nothing else.**
+Stripe takes 2.9% + 30¢ per sale. On $19.99 that's about $0.88, so you keep
+about **$19.11**.
 
-Stripe takes 2.9% + 30¢ from each sale. On a $19.99 purchase that's about
-$0.88, so you keep about $19.11.
-
-### When would this stop being free?
-
-The free tiers are generous, and you will know long before you get near them:
-
-- Cloudflare Workers: 100,000 requests a day. Roughly 15,000–20,000 visitors a
-  day. Past that it's $5/month.
-- Cloudflare D1: far more storage and reads than this app will use. The app
-  stores only email addresses and purchase records, so this is not a realistic
-  concern.
-- Resend: 3,000 emails a month, 100 a day. That's 3,000 sign-ins and receipts.
-  Past that, $20/month.
-
-If you cross any of these you are making far more than $5 a month.
+**When would this stop being free?** Workers: 100,000 requests/day — roughly
+15,000–20,000 visitors. Then $5/month. Resend: 3,000 emails/month. Then $20.
+D1: far more than this app will ever use. If you cross any of these you're
+making far more than $5.
 
 ---
 
-## Before you start, decide two things
+## Step 1 — The database
 
-**1. Your domain name.** Buy it from Cloudflare Registrar (they sell at cost,
-around $10/year for a `.com`, with no renewal price hike) once you have a
-Cloudflare account. Namecheap or Porkbun are fine alternatives.
+**Time: 5 minutes.**
 
-**2. Your support email address.** Real customers will write to it about
-refunds and problems. A Gmail address is fine to start. It goes on the Contact
-page, the Privacy Policy and the Terms.
+> **This is the step my earlier draft got wrong.** D1 is **not** under Workers &
+> Pages. It's further down the left sidebar in its own section called
+> **Storage & Databases** — you may need to scroll past Compute to see it.
 
----
+The direct link, which skips the hunting:
 
-## Step 1 — Cloudflare
+**https://dash.cloudflare.com/ff4b01fbc362a9e794842a52c0ce2996/workers/d1**
 
-**Time: about 20 minutes.**
-
-1. Go to **dash.cloudflare.com** and create a free account.
-
-2. If you're buying your domain from Cloudflare: **Domain Registration →
-   Register Domain**. If you bought it elsewhere: **Add a site** and follow the
-   instructions to point it at Cloudflare (you'll change two "nameserver"
-   settings at the company you bought it from — they all have a help page for
-   this).
-
-3. In the left sidebar, click **Workers & Pages**. On the right of that page
-   you'll see your **Account ID** — copy it somewhere, you'll need it shortly.
-
-4. Create the database. Still under Workers & Pages, go to **D1 SQL Database →
-   Create**. Name it exactly:
-
+1. Click **Create** (or "Create database").
+2. Name it exactly:
    ```
    afterido
    ```
+   Lowercase, no hyphen. It must match what's in `wrangler.jsonc`.
+3. Leave the location on Automatic. Click Create.
+4. On the database's page, copy the **Database ID** — a long string of letters,
+   numbers and hyphens.
 
-   When it's made, copy the **Database ID** it shows you.
-
-5. Create an API token. Go to **My Profile → API Tokens → Create Token**, pick
-   the **Edit Cloudflare Workers** template, and create it. Copy the token —
-   Cloudflare will only show it once.
-
----
-
-## Step 2 — Tell GitHub about Cloudflare
-
-**Time: 5 minutes.**
-
-1. In your GitHub repository, go to **Settings → Secrets and variables →
-   Actions**.
-2. Click **New repository secret**, twice:
-
-   | Name | Value |
-   |---|---|
-   | `CLOUDFLARE_API_TOKEN` | the token from step 1.5 |
-   | `CLOUDFLARE_ACCOUNT_ID` | the Account ID from step 1.3 |
-
-Until both of these exist, the deploy step quietly skips itself, so nothing is
-broken while you're partway through.
+If the sidebar section is called something slightly different, the link above
+still works — Cloudflare renames dashboard sections from time to time, and D1
+itself is stable.
 
 ---
 
-## Step 3 — One file to edit
+## Step 2 — Put the database ID in the code
 
-**Time: 5 minutes.**
+**Time: 2 minutes.**
 
-In your repository, open `wrangler.jsonc` (click the file, then the pencil
-icon). Find this line:
+In your GitHub repository, open `wrangler.jsonc` (click the file, then the
+pencil icon). Find:
 
 ```jsonc
 "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
 ```
 
-Replace it with the Database ID from step 1.4, keeping the quotes.
+Replace it with the ID from step 1, keeping the quotes. Commit.
 
-Then find the `vars` block near the bottom and fill in these three:
+Your account ID and domain are already filled in — you don't need to touch
+those.
 
-```jsonc
-"PUBLIC_ORIGIN": "https://afterido.com",     ← your real domain, with https://
-"EMAIL_FROM": "AfterIDo <hello@afterido.com>",
-"SUPPORT_EMAIL": "you@gmail.com",
-```
+---
 
-Leave `STRIPE_PRICE_ID` empty for now — Stripe comes next.
+## Step 3 — The Cloudflare API token
 
-**`PUBLIC_ORIGIN` matters more than it looks.** It's the address that goes into
-every sign-in link you email. Get it wrong and the links won't work.
+**Time: 5 minutes.** One secret, not two — the account ID isn't secret and is
+already in the config.
 
-Click **Commit changes** at the bottom.
+1. Go to **My Profile → API Tokens → Create Token**
+   (https://dash.cloudflare.com/profile/api-tokens)
+2. Use the **Edit Cloudflare Workers** template.
+3. Under "Account Resources" make sure your account is selected; under "Zone
+   Resources" select **after-i-do.com** (or All zones).
+4. Create it and **copy the token — Cloudflare only shows it once.**
+
+Then in GitHub: **Settings → Secrets and variables → Actions → New repository
+secret**
+
+| Name | Value |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | the token you just copied |
+
+Until this exists, the deploy workflow skips itself, so nothing is broken while
+you're partway through.
+
+**Once you add it and merge, your site deploys to after-i-do.com.** Accounts
+work. Payments don't yet — that's next.
 
 ---
 
 ## Step 4 — Stripe, in test mode
 
-**Time: 20 minutes.** Do this in test mode first. You will not be able to take
-real money until you finish step 7, and that is deliberate.
+**Time: 20 minutes.** Test mode first. You cannot take real money until step 7,
+and that's deliberate.
 
 1. Create an account at **stripe.com**.
 
-2. Make sure the **Test mode** toggle at the top right is **on**. Everything in
-   this step happens in test mode.
+2. **Test mode** toggle at the top right must be **on**.
 
 3. **Product catalogue → Add product**:
    - Name: `AfterIDo Premium`
    - Price: `19.99` USD
-   - Pricing model: **One time** ← this matters. Not recurring.
-   - Save it, then copy the **Price ID**. It starts with `price_`.
+   - **One time** ← this matters. Not recurring.
+   - Save, then copy the **Price ID** (starts with `price_`).
 
-4. **Developers → API keys**. Copy the **Secret key** (starts with `sk_test_`).
+4. **Developers → API keys** → copy the **Secret key** (`sk_test_...`).
 
 5. **Developers → Webhooks → Add endpoint**:
-   - Endpoint URL: `https://YOURDOMAIN.com/api/stripe/webhook`
-   - Events to send — select these four:
+   - Endpoint URL: `https://after-i-do.com/api/stripe/webhook`
+   - Events — select these four:
      - `checkout.session.completed`
      - `checkout.session.async_payment_succeeded`
      - `charge.refunded`
      - `charge.dispute.closed`
-   - Save, then copy the **Signing secret** (starts with `whsec_`).
+   - Save, then copy the **Signing secret** (`whsec_...`).
 
-**What the webhook is for:** it's how Stripe tells your site that a payment
+**What the webhook is for:** it's how Stripe tells your site a payment
 succeeded. Everything about who gets Premium depends on it. Without it, people
-would pay and not get what they bought.
+pay and get nothing.
 
 ---
 
@@ -192,66 +174,72 @@ would pay and not get what they bought.
 won't send until you do.
 
 1. Create an account at **resend.com**.
-2. **Domains → Add Domain**, enter your domain, and add the DNS records it
-   shows you. If your domain is on Cloudflare, Resend can often add them for
-   you; otherwise copy them into Cloudflare's **DNS** section.
-3. **API Keys → Create API Key**. Copy it (starts with `re_`).
+2. **Domains → Add Domain** → `after-i-do.com`. Since the domain is on
+   Cloudflare, Resend can usually add the DNS records for you; otherwise copy
+   them into Cloudflare's **DNS** section.
+3. **API Keys → Create API Key** → copy it (`re_...`).
+
+The from-address is already set to `AfterIDo <hello@after-i-do.com>`, which
+works once the domain verifies. You don't need a real inbox at that address —
+it only sends.
 
 ---
 
 ## Step 6 — The four secrets
 
-**Time: 10 minutes.** These go into Cloudflare, not GitHub, because they are
-what your live site uses.
+**Time: 10 minutes.** These go into **Cloudflare**, not GitHub — they're what
+your live site uses.
 
-Go to **Workers & Pages → afterido → Settings → Variables and Secrets**. For
-each one below, click **Add**, choose **Secret** (not Text), and paste:
+**Workers & Pages → afterido → Settings → Variables and Secrets.** For each,
+click Add, choose **Secret** (not Text), and paste:
 
-| Name | Value | Where it came from |
+| Name | Value | From |
 |---|---|---|
 | `SESSION_SECRET` | a long random string — see below | you make it up |
 | `STRIPE_SECRET_KEY` | `sk_test_...` | step 4.4 |
 | `STRIPE_WEBHOOK_SECRET` | `whsec_...` | step 4.5 |
 | `RESEND_API_KEY` | `re_...` | step 5.3 |
 
-**For `SESSION_SECRET`**, open a new browser tab, press F12, click "Console",
-and paste this, then press Enter:
+**For `SESSION_SECRET`**: open a new browser tab, press F12, click Console,
+paste this and press Enter:
 
 ```js
 crypto.randomUUID() + crypto.randomUUID()
 ```
 
-Copy the result (without the quotes). It must be at least 32 characters. Never
-share it — it's what keeps other people out of your customers' accounts.
+Copy the result without the quotes. At least 32 characters. **Never share it** —
+it's what keeps other people out of your customers' accounts.
 
-Then go back to `wrangler.jsonc` in GitHub and fill in the price:
+Then back in GitHub, edit `wrangler.jsonc` once more and fill in two things:
 
 ```jsonc
-"STRIPE_PRICE_ID": "price_...",   ← from step 4.3
+"STRIPE_PRICE_ID": "price_...",     ← from step 4.3
+"SUPPORT_EMAIL": "you@gmail.com",   ← see below
 ```
 
-Commit that, and your site will deploy with everything connected.
+**About `SUPPORT_EMAIL`:** it's shown publicly on the Contact page and in the
+Terms and Privacy Policy. It's where real customers write about refunds. A
+Gmail address is fine, but pick it deliberately — until you set it, the Contact
+page honestly says no address is configured rather than inventing one.
 
-**Your site is now live and can take test payments.**
+Commit. **Your site is now live and can take test payments.**
 
 ---
 
-## Step 7 — Test it before you take real money
+## Step 7 — Test before you take real money
 
 **Time: 15 minutes. Do not skip this.**
 
-On your phone, go to your domain and do the whole thing as a customer would:
+On your phone, go to **after-i-do.com** and do the whole thing as a customer:
 
-- [ ] The landing page loads and looks right
+- [ ] Landing page loads and looks right
 - [ ] "Start My Name Change" walks through the questions
-- [ ] At the end, it offers to save your plan — enter your email
+- [ ] At the end it offers to save your plan — enter your email
 - [ ] **The sign-in email arrives.** Check spam. Click the link.
 - [ ] You land back in your plan, signed in
-- [ ] Go to Pricing. It says **"Stripe is in test mode — no real charge will be
-      made."**
-- [ ] Click "Unlock Premium". You're sent to Stripe's payment page.
-- [ ] Pay with the test card: **4242 4242 4242 4242**, any future expiry, any
-      3-digit code, any postcode
+- [ ] Pricing page says **"Stripe is in test mode — no real charge will be made."**
+- [ ] Click "Unlock Premium" — you're sent to Stripe's page
+- [ ] Pay with **4242 4242 4242 4242**, any future expiry, any 3-digit code, any postcode
 - [ ] You come back and Premium unlocks within a few seconds
 - [ ] The Letters page shows real letters with your name in them
 - [ ] **The receipt email arrives**
@@ -259,42 +247,37 @@ On your phone, go to your domain and do the whole thing as a customer would:
 
 Now test that failure works properly:
 
-- [ ] Sign out. Open the Pricing page. It asks you to make an account before
-      buying — it does not offer a broken button.
-- [ ] Start checkout again and press **back** on Stripe's page instead of
-      paying. You return with "your payment was cancelled" and **Premium stays
-      locked.**
+- [ ] Sign out, open Pricing — it asks you to make an account first, rather than
+      offering a broken button
+- [ ] Start checkout and press **back** on Stripe's page instead of paying. You
+      return with "your payment was cancelled" and **Premium stays locked.**
 
-**If Premium unlocks without a payment, stop and do not go live.** That would
-mean anyone could take it for free.
+**If Premium ever unlocks without a payment, stop and do not go live.**
 
 ### Going live
 
-Once the whole list passes:
-
 1. In Stripe, switch **Test mode** off.
-2. Complete Stripe's account activation (bank details, your legal information).
-   Stripe will not release money until this is done.
-3. Redo step 4.3 (the product), 4.4 (the key) and 4.5 (the webhook) **in live
-   mode** — live and test mode are separate worlds and nothing carries over.
-4. Update `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in Cloudflare with
-   the live values, and `STRIPE_PRICE_ID` in `wrangler.jsonc`.
-5. Buy it yourself with a real card. Then refund yourself from the Stripe
-   dashboard, and check that Premium switches off — that proves refunds work
-   before a stranger needs one.
+2. Complete Stripe's account activation — bank details, your legal information.
+   Stripe won't release money until this is done.
+3. **Redo steps 4.3, 4.4 and 4.5 in live mode.** Live and test are separate
+   worlds; nothing carries over, including the webhook.
+4. Update `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in Cloudflare, and
+   `STRIPE_PRICE_ID` in `wrangler.jsonc`.
+5. **Buy it yourself with a real card. Then refund yourself** from the Stripe
+   dashboard and check Premium switches off — that proves refunds work before a
+   stranger needs one.
 
 ---
 
-## Step 8 — Before you tell anyone about it
+## Step 8 — Before you tell anyone
 
 **Legal.** Open `src/config/site.ts` and check three things:
 
 ```ts
 legalEntity: 'AfterIDo',
 ```
-If you've registered a company, put its registered name here. If you're
-trading as yourself, put your own name. This appears in the Terms and the
-Privacy Policy as the person the customer is contracting with.
+If you've registered a company, its registered name. Trading as yourself? Your
+own name. This is who the customer is contracting with.
 
 ```ts
 governingLaw: 'the State of New Jersey, United States',
@@ -306,27 +289,31 @@ refundWindowDays: 30,
 ```
 The window the Terms promise. Honour it.
 
-Then read `/privacy`, `/terms` and `/disclaimer` on your own site. They're
-written to describe what this app actually does, so they're accurate today —
-but they're your promises now. **If you're taking money from the public, having
-a lawyer read them once is money well spent.** This guide is not legal advice.
+Then read `/privacy`, `/terms` and `/disclaimer` on your own site. They describe
+what the app actually does, so they're accurate today — but they're your
+promises now. **If you're taking money from the public, having a lawyer read
+them once is money well spent.** This guide is not legal advice.
 
 **Search engines.**
 
-1. Go to **search.google.com/search-console** and add your domain.
-2. Submit your sitemap: `https://yourdomain.com/sitemap.xml`
-3. It'll take a few weeks to show up in results. That's normal.
+1. **search.google.com/search-console** → add `after-i-do.com`
+2. Submit the sitemap: `https://after-i-do.com/sitemap.xml`
+3. A few weeks to show up in results. That's normal.
 
-**Check the link preview.** Send yourself the link in a text message. You should
-see the pink-and-white AfterIDo card, not a blank box.
+**Check the link preview.** Text yourself the link. You should see the
+pink-and-white AfterIDo card, not a blank box.
+
+**Optional: www.** The Worker is bound to the bare `after-i-do.com`. If you want
+`www.after-i-do.com` to work too, add a redirect in Cloudflare: **Rules → Redirect
+Rules → Create**, matching hostname `www.after-i-do.com` and redirecting to
+`https://after-i-do.com` with a 301.
 
 ---
 
 ## How you'll know if it's working
 
-Everything is already being counted — no extra service, no tracking pixel, no
-cost. To see the numbers, go to **Workers & Pages → D1 → afterido → Console**
-and paste this in:
+Everything is already counted — no extra service, no tracking pixel, no cost.
+Go to your D1 database → **Console** and paste:
 
 ```sql
 SELECT day, name, COUNT(*) AS n
@@ -336,100 +323,99 @@ GROUP BY day, name
 ORDER BY day DESC, n DESC;
 ```
 
-You'll see counts like `landing_viewed`, `onboarding_completed`,
-`checkout_started` and `purchase_completed` per day.
-
 The number that matters most:
 
 ```sql
 SELECT
-  SUM(name = 'landing_viewed')     AS visitors,
+  SUM(name = 'landing_viewed')       AS visitors,
   SUM(name = 'onboarding_completed') AS finished_setup,
   SUM(name = 'purchase_completed')   AS bought
 FROM events
 WHERE day >= date('now', '-30 days');
 ```
 
-If lots of people finish onboarding and nobody buys, the price or the Premium
-pitch is wrong. If nobody finishes onboarding, the questions are too long or
-the landing page is promising the wrong thing.
+Lots finish onboarding but nobody buys → the price or the Premium pitch is
+wrong. Nobody finishes onboarding → the questions are too long, or the landing
+page promises the wrong thing.
 
-**These counts cannot tell you who anyone is.** There's no user ID, no IP
-address and no cookie in them — deliberately. That's the trade: you get to see
-what's working, and your customers don't get tracked.
+**These counts cannot tell you who anyone is.** No user ID, no IP address, no
+cookie — deliberately. You see what's working; your customers don't get tracked.
 
 ---
 
 ## Things that will come up
 
 **"Someone says they paid but doesn't have Premium."**
-Look them up in Stripe by email. If the payment succeeded, check
-**Developers → Webhooks** in Stripe — click your endpoint and look for failed
-deliveries. Stripe retries automatically for up to three days. You can also
-just ask them to visit `/premium/success` again, or refund them.
+Look them up in Stripe by email. If the payment succeeded, check **Developers →
+Webhooks** and click your endpoint for failed deliveries — Stripe retries for up
+to three days. You can also ask them to revisit `/premium/success`, or refund.
 
 **"I want to give someone Premium for free."**
-Cloudflare → D1 → afterido → Console:
+D1 → afterido → Console:
 ```sql
 UPDATE users SET plan = 'premium', plan_granted_at = unixepoch()
 WHERE email = 'them@example.com';
 ```
-They need to have signed in at least once first, or there's no row to update.
+They must have signed in once first, or there's no row to update.
 
 **"Someone wants their data deleted."**
-They can do it themselves: Profile → Delete my account. Or run:
+They can do it themselves: Profile → Delete my account. Or:
 ```sql
 DELETE FROM users WHERE email = 'them@example.com';
 ```
-Their purchase record stays, without their email attached — that's deliberate,
-because you need financial records and they contain nothing identifying.
+Their purchase record stays, with their email detached — deliberate, because you
+need financial records and those contain nothing identifying.
 
 **"I want to change the price."**
-Make a *new* Price in Stripe (don't edit the old one — existing records point
-at it), then update `STRIPE_PRICE_ID` in `wrangler.jsonc` and `PRICE_LABEL` to
-match. People who already bought keep what they bought.
+Make a *new* Price in Stripe (don't edit the old one — existing records point at
+it), then update `STRIPE_PRICE_ID` and `PRICE_LABEL` in `wrangler.jsonc`. People
+who already bought keep what they bought.
 
-**"A government link is broken / a requirement changed."**
-`src/data/tasks.ts` holds every task and every link, and
-`src/data/states.ts` holds the state-specific guidance. Both are plain lists —
-edit the text, commit, and it's live in about two minutes. Update the
-`lastReviewed` date when you check a state.
+**"A government link is broken."**
+`src/data/tasks.ts` holds every task and link; `src/data/states.ts` holds
+state-specific guidance. Plain lists — edit, commit, live in about two minutes.
+Update the `lastReviewed` date when you check a state.
 
-**"I want to add proper detail for another state."**
+**"I want proper detail for another state."**
 `src/data/states.ts` — copy the New Jersey block, change the details, add it to
-`STATE_GUIDANCE`. Until you do, that state's page says honestly that you
-haven't verified the local specifics, and links to the official agency. That's
-better than guessing, and it's why the app can cover all fifty states without
-making anything up.
+`STATE_GUIDANCE`. Until then that state's page honestly says you haven't
+verified the local specifics and links to the official agency. That's better
+than guessing, and it's why the app covers all fifty states without making
+anything up.
 
 ---
 
 ## What to do if something breaks
 
-**The site is down.** Cloudflare → Workers & Pages → afterido → **Logs**. It
-shows what actually happened.
+**Site is down.** Workers & Pages → afterido → **Logs**.
 
-**A deploy failed.** GitHub → **Actions** tab → click the red run. The step that
-failed is expanded, and the error is usually the last few lines.
+**A deploy failed.** GitHub → **Actions** → click the red run. The failed step
+is expanded and the error is usually the last few lines.
 
-**Sign-in emails aren't arriving.** In order: check spam; check Resend's
-dashboard for bounces; check your domain is verified in Resend; check
-`EMAIL_FROM` uses that same domain.
+**"D1 database not found" in the deploy log.** The database name in Cloudflare
+isn't exactly `afterido`, or the `database_id` in `wrangler.jsonc` is wrong.
 
-**Payments aren't unlocking Premium.** Check the webhook in Stripe first — it's
-almost always either the wrong URL or the wrong signing secret in Cloudflare.
+**Sign-in emails not arriving.** In order: spam folder; Resend's dashboard for
+bounces; is `after-i-do.com` verified in Resend.
+
+**Payments not unlocking Premium.** Check the webhook in Stripe first — it's
+almost always the wrong URL or the wrong signing secret in Cloudflare.
 
 ---
 
 ## The short version
 
-1. Cloudflare account, database called `afterido`, API token → GitHub secrets
-2. Fill in `wrangler.jsonc`: database ID, your domain, your email
-3. Stripe in test mode: product, key, webhook
-4. Resend: verify your domain, get a key
-5. Four secrets into Cloudflare, price ID into `wrangler.jsonc`
-6. **Test the whole thing on your phone with card 4242 4242 4242 4242**
-7. Switch Stripe to live, redo the Stripe bits, test again with a real card
-8. Check the legal pages, submit your sitemap
+1. ~~Cloudflare account~~ ✅ · ~~domain~~ ✅
+2. **Create the D1 database named `afterido`** — Storage & Databases, not
+   Workers & Pages
+3. Paste its ID into `wrangler.jsonc`
+4. One GitHub secret: `CLOUDFLARE_API_TOKEN`
+5. Stripe in test mode: product, key, webhook
+6. Resend: verify after-i-do.com, get a key
+7. Four secrets into Cloudflare; price ID and support email into `wrangler.jsonc`
+8. **Test on your phone with card 4242 4242 4242 4242**
+9. Switch Stripe to live, redo the Stripe bits, test with a real card, refund
+   yourself
+10. Check the legal pages, submit your sitemap
 
-**Total cost to get here: the price of a domain name.**
+**Remaining cost to launch: $0.**

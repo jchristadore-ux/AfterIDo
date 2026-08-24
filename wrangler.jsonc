@@ -6,6 +6,14 @@
   "main": "worker/index.ts",
   "compatibility_date": "2025-11-01",
 
+  // Not a secret — it's in the address bar of every Cloudflare dashboard page.
+  "account_id": "ff4b01fbc362a9e794842a52c0ce2996",
+
+  // Binds the Worker to the real domain and creates the DNS record for it.
+  // Until the domain is active in this Cloudflare account, comment this out
+  // and the Worker still serves at afterido.christadore.workers.dev.
+  "routes": [{ "pattern": "after-i-do.com", "custom_domain": true }],
+
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
@@ -31,7 +39,8 @@
     {
       "binding": "DB",
       "database_name": "afterido",
-      // Replaced by the id that `wrangler d1 create afterido` prints.
+      // From Storage & Databases → D1 SQL Database → afterido, after you
+      // create it. See LAUNCH_GUIDE.md step 1.
       "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
       "migrations_dir": "migrations"
     }
@@ -41,13 +50,22 @@
   "triggers": { "crons": ["0 * * * *"] },
 
   "vars": {
-    // Public, non-secret configuration. Secrets are set with
-    // `wrangler secret put NAME` and never appear in this file:
+    // Public, non-secret configuration. Secrets are set in the dashboard under
+    // Settings → Variables and Secrets, and never appear in this file:
     //   SESSION_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY
-    "PUBLIC_ORIGIN": "",
+    "PUBLIC_ORIGIN": "https://after-i-do.com",
+    "EMAIL_FROM": "AfterIDo <hello@after-i-do.com>",
+
+    // From Stripe, once the product exists. Payments stay switched off, and
+    // the UI says so, until this is filled in.
     "STRIPE_PRICE_ID": "",
-    "EMAIL_FROM": "",
-    "SUPPORT_EMAIL": "support@example.com",
+
+    // Shown publicly on the Contact page and in the legal pages, so choose it
+    // deliberately — this is the address real customers will write to about
+    // refunds. Until it is set, the Contact page says no address is configured
+    // rather than inventing one.
+    "SUPPORT_EMAIL": "",
+
     "PRICE_LABEL": "$19.99"
   },
 
