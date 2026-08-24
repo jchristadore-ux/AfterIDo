@@ -29,6 +29,17 @@
   --color-primary-500: #c99494;
   --color-primary-600: #bd8383; /* hover */
   --color-primary-700: #a86e6e; /* active */
+  /*
+   * Text-on-white only. The brand rose-gold reads at 2.16:1 against white and
+   * primary-700 at 4.10:1 — both below the 4.5:1 needed for body text. This is
+   * the lightest shade of the same hue that clears it (4.51:1), computed
+   * rather than eyeballed; it is `ACCESSIBLE_ALTERNATES.primary` in brand.ts.
+   *
+   * Every *fill* still uses the exact brand hex, so the palette looks the same.
+   * This is only for brand-coloured lettering on a light surface, where the
+   * brand value is not a style choice but a legibility failure.
+   */
+  --color-primary-800: #8e6f6f;
 
   /* ---- Brand: champagne ------------------------------------------------ */
   --color-champagne: #e8d5c4; /* exact brand value */

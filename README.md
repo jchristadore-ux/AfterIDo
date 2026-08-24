@@ -10,14 +10,19 @@ done.
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
-npm run build      # typecheck + production build
-npm run preview
+npm run dev        # http://localhost:5173 — the app, no backend needed
+npm run check      # typecheck + tests + build. Run this before pushing.
+npm run dev:worker # the app *with* the API, on Cloudflare's local runtime
 ```
 
-No environment variables, no backend, no account. Open the landing page and
-click **"look around with sample data"** to see the whole app populated with a
-realistic mid-journey user (Sarah Johnson → Sarah Smith, married in New Jersey).
+The front end runs with no environment variables and no backend: everything
+free works, and the UI says plainly that Premium can't be bought. Open the
+landing page and click **"look around with sample data"** to see the whole app
+populated with a realistic mid-journey user (Sarah Johnson → Sarah Smith,
+married in New Jersey).
+
+**Deploying it for real** — Cloudflare, Stripe, a domain — is in
+[`LAUNCH_GUIDE.md`](LAUNCH_GUIDE.md), written for a non-developer.
 
 ---
 
@@ -75,8 +80,10 @@ These are enforced in the data and visible in the UI, not just in a disclaimer:
 - **Never collected:** Social Security numbers, driver's license numbers, account
   numbers, passwords. They're absent from the data model entirely. Tasks tell you
   to have them on hand; the app never asks you to type them.
-- **Profile data** lives in `localStorage` on your device. There is no server, so
-  nothing is transmitted anywhere in this build.
+- **Profile data** lives in `localStorage` on the device. It is never sent to the
+  server, and the server has no column for it — see the schema in
+  `migrations/0001_init.sql`, which holds an email address, an entitlement and a
+  Stripe id, and nothing else.
 - **Uploaded files** are held in memory for the tab and are *never written to
   disk*. Reload and the bytes are gone; only the metadata (name, size, what it's
   for) persists so the checklist still knows you have it. See the reasoning in
@@ -119,10 +126,7 @@ they meet. That's what makes adding a state a one-entry change to `states.ts`,
 and adding a task a one-entry change to `tasks.ts` — no component edits either
 way.
 
-### Where the real integrations go
-
-Every stub is an interface with a documented production implementation, marked
-`INTEGRATION POINT` in the source:
+### Where the integrations are
 
 | Seam | Today | Production |
 |---|---|---|
@@ -143,19 +147,39 @@ to third parties, and the app says so where a user would expect otherwise.
 - **Free** — the full checklist, the order of operations, official links, prefill,
   progress tracking.
 - **Premium ($19.99 once)** — state-specific guidance, printable packet,
-  notification letters, document vault, reminders.
+  notification letters, document vault, email reminders, custom tasks, and a
+  dated completion record.
 - **Premium Plus** — reserved for household management and later life events.
   Not built.
 
-There is no payment code in this build. "Unlock preview" flips a local flag and
-the UI says exactly that.
+**The plan is not stored on the client.** It comes from `/api/me`, which reads
+it from the database, which is only ever written by a Stripe-verified webhook or
+a direct read-back of a Checkout Session. There is no local flag to flip, and
+`worker/verify.test.mts` covers the signature checks that make that true.
 
 ---
 
 ## Stack
 
-React 19 · TypeScript · Vite · Tailwind CSS v4 · React Router · lucide-react.
-No state library, no UI framework, no backend.
+**Front end** — React 19 · TypeScript · Vite · Tailwind CSS v4 · React Router ·
+lucide-react. No state library, no UI framework.
+
+**Back end** — one Cloudflare Worker (`worker/`) with a D1 database, serving the
+built site and `/api/*`. Zero runtime dependencies: Stripe is called over
+`fetch`, and the signatures are WebCrypto. It exists for exactly two things a
+browser cannot be trusted to do — take a payment, and decide who has paid.
+
+```
+worker/
+  index.ts       Routing, sessions, checkout, the Stripe webhook, analytics
+  crypto.ts      HMAC, hashing, constant-time compare, signed session tokens
+  db.ts          Every query, all with bound parameters
+  stripe.ts      Checkout Sessions and webhook signature verification
+  email.ts       Transactional mail (Resend), behind a one-file interface
+  seo.ts         Per-route link previews via HTMLRewriter, robots, sitemap
+shared/seo.ts    Page metadata, read by both the browser and the Worker
+migrations/      The D1 schema
+```
 
 ---
 
@@ -215,5 +239,12 @@ white or champagne (10.98:1 and 7.71:1), so the shortfall is confined to text on
 brand-colored buttons.
 
 `ACCESSIBLE_ALTERNATES` in `src/brand.ts` holds the lightest shade of each hue
-that clears 4.5:1 against white, computed rather than eyeballed. Swapping a
-token in `index.css` is a one-line change per color if readability should win.
+that clears 4.5:1 against white, computed rather than eyeballed.
+
+**One of them is now in use.** `--color-primary-800` (`#8E6F6F`, 4.51:1) is the
+rose-gold's accessible shade, and it is what brand-coloured *lettering on a
+light surface* uses — the outline button in particular, which at the brand hex
+read at 2.16:1 and was genuinely hard to make out on a phone. Every **fill**
+still uses the exact brand hex, so the palette looks as specified; the change is
+confined to the one place where the brand value wasn't a style choice but a
+legibility failure.

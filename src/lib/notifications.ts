@@ -1,14 +1,18 @@
 /**
  * Reminders.
  *
- * The MVP delivers reminders in-app: a task carries a `remindAt`, and the
- * dashboard surfaces anything due. That is the whole feature today, and the UI
- * says so rather than implying an email will arrive.
+ * ── Where each channel actually runs ──────────────────────────────────────
+ * In-app is the default and needs nothing: a task carries a `remindAt` and the
+ * dashboard surfaces anything due.
  *
- * The data model and this dispatcher are built for the real thing, though —
- * adding email or push means implementing `ReminderChannel` and registering it.
- * Scheduling would move server-side (a durable queue keyed on `remindAt`), and
- * every channel must respect the per-user preferences in `ReminderPreferences`.
+ * Email is real, but it does not run here. The browser cannot send mail
+ * without shipping an API key to the client, so the reminders a Premium user
+ * sets are handed to the server (`PUT /api/reminders`) and an hourly cron in
+ * the Worker sends the ones that have come due. This file describes the
+ * channels; `src/lib/reminderSchedule.ts` decides what gets sent, and it sends
+ * a date and a task title — nothing else about her.
+ *
+ * Push is still a stub, and says so rather than failing quietly.
  */
 
 export type ReminderChannelId = 'in-app' | 'email' | 'push';
@@ -40,12 +44,12 @@ const inAppChannel: ReminderChannel = {
 const emailChannel: ReminderChannel = {
   id: 'email',
   label: 'Email',
-  available: false,
+  available: true,
   async send() {
-    // INTEGRATION POINT — production posts to the transactional email service
-    // from a server-side worker. Never from the browser: that would require
-    // shipping an API key to the client.
-    throw new Error('Email reminders are not enabled in this build.');
+    // Deliberately a no-op on this side. Email is sent by the Worker's cron
+    // sweep from the queue the client registers via `PUT /api/reminders`; a
+    // browser cannot send mail without holding a mail-provider key, and it
+    // must never hold one.
   },
 };
 

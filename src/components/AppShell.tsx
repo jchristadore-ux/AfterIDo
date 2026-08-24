@@ -3,9 +3,11 @@ import {
   FolderLock,
   House,
   ListChecks,
+  Mail,
   UserRound,
   type LucideIcon,
 } from 'lucide-react';
+import { AccountNudge } from './AccountNudge';
 import { useApp } from '@/store/AppContext';
 import { WordmarkLink } from './Wordmark';
 import { cx } from './ui';
@@ -17,9 +19,15 @@ interface NavItem {
   icon: LucideIcon;
 }
 
+/**
+ * Five tabs is the most a phone bottom bar takes before the labels start
+ * truncating; Letters earns its place because it is the one Premium feature
+ * that is a destination rather than something folded into a task.
+ */
 const NAV: NavItem[] = [
   { to: '/app', label: 'Home', icon: House },
   { to: '/app/checklist', label: 'Checklist', icon: ListChecks },
+  { to: '/app/letters', label: 'Letters', icon: Mail },
   { to: '/app/documents', label: 'Documents', icon: FolderLock },
   { to: '/app/profile', label: 'Profile', icon: UserRound },
 ];
@@ -98,6 +106,7 @@ export function AppShell() {
           className="animate-rise flex-1 px-5 pt-6 pb-28 lg:px-10 lg:pt-10 lg:pb-14"
         >
           <div className="mx-auto w-full max-w-3xl xl:max-w-4xl">
+            <AccountNudge />
             <Outlet />
             <Disclaimer className="mt-12" />
           </div>
@@ -105,7 +114,7 @@ export function AppShell() {
 
         {/* Mobile bottom tabs */}
         <nav className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-charcoal-100 bg-surface/95 backdrop-blur-md lg:hidden">
-          <div className="mx-auto grid max-w-lg grid-cols-4">
+          <div className="mx-auto grid max-w-lg grid-cols-5">
             {NAV.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}

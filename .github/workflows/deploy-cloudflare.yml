@@ -1,0 +1,68 @@
+name: Deploy to Cloudflare
+
+# The production deployment: one Cloudflare Worker serves the built site and
+# the /api routes, with a D1 database behind it. This is what makes payments
+# possible — GitHub Pages is static, so it can host the app but cannot verify
+# a Stripe webhook.
+#
+# It only runs once the two repository secrets exist, so it is inert until you
+# follow the Cloudflare steps in LAUNCH_GUIDE.md:
+#   CLOUDFLARE_API_TOKEN  — a token with "Edit Cloudflare Workers"
+#   CLOUDFLARE_ACCOUNT_ID — from the Workers & Pages page
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: cloudflare
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for Cloudflare credentials
+        id: creds
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$TOKEN" ] && [ -n "$ACCOUNT" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Cloudflare secrets are not set yet — skipping. See LAUNCH_GUIDE.md."
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.creds.outputs.ready == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: steps.creds.outputs.ready == 'true'
+        run: npm ci
+
+      # No VITE_BASE here: the Worker serves the app from the domain root.
+      - name: Build
+        if: steps.creds.outputs.ready == 'true'
+        run: npm run build
+
+      - name: Apply database migrations
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 d1 migrations apply afterido --remote
+
+      - name: Deploy
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 deploy

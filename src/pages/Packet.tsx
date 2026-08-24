@@ -15,6 +15,7 @@ import {
   marriagePlace,
 } from '@/lib/format';
 import { Button, Callout, Card, CheckCard } from '@/components/ui';
+import { track } from '@/lib/analytics';
 import { PremiumGate } from '@/components/PremiumGate';
 import { DISCLAIMER_TEXT } from '@/components/Disclaimer';
 
@@ -89,7 +90,13 @@ function PacketBuilder() {
             description="Confirmation numbers and who you spoke to"
           />
         </div>
-        <Button className="mt-4" onClick={() => window.print()}>
+        <Button
+          className="mt-4"
+          onClick={() => {
+            track('packet_printed');
+            window.print();
+          }}
+        >
           <Printer size={16} /> Print or save as PDF
         </Button>
         <p className="mt-2 text-xs text-charcoal-400">

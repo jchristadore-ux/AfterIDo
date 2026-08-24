@@ -21,6 +21,7 @@ import { formatMinutes, fullName, relativeDay } from '@/lib/format';
 import { Badge, Card, LinkButton, ProgressRing, SectionHeading } from '@/components/ui';
 import { TaskCard } from '@/components/TaskCard';
 import { WeCanBadge } from '@/components/Disclaimer';
+import { CompletionSummary } from '@/components/CompletionSummary';
 
 export function Dashboard() {
   const { state, tasks, progress } = useApp();
@@ -85,6 +86,18 @@ export function Dashboard() {
           )}
         </p>
       </header>
+
+      {/* --------------------------------------------- Completion record */}
+      {allDone && (
+        <section>
+          <SectionHeading
+            eyebrow="Finished"
+            title="Keep the record"
+            className="mb-4"
+          />
+          <CompletionSummary />
+        </section>
+      )}
 
       {/* -------------------------------------------------------- Progress */}
       <Card className="overflow-hidden">

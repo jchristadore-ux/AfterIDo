@@ -8,3 +8,6 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Wrangler's local dev state, including the local D1 database
+.wrangler

@@ -1,81 +1,115 @@
+import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
+  Banknote,
+  Briefcase,
   Check,
   ClipboardList,
   FileText,
+  Landmark,
   Lock,
+  Plane,
   ShieldCheck,
   Sparkles,
   UserRoundPen,
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
-import { Wordmark, WordmarkLink } from '@/components/Wordmark';
+import { useAccount } from '@/store/AccountContext';
+import { Wordmark } from '@/components/Wordmark';
+import { SiteFooter, SiteHeader } from '@/components/SiteChrome';
+import { Seo } from '@/components/Seo';
 import { Button, Card, LinkButton } from '@/components/ui';
-import { DISCLAIMER_TEXT } from '@/components/Disclaimer';
+import { LANDING_FAQ, faqJsonLd } from '@/data/faq';
+import { DEFAULT_DESCRIPTION, DEFAULT_TITLE } from '@shared/seo';
 import { TASKS } from '@/data/tasks';
+import { track } from '@/lib/analytics';
+
+/**
+ * The landing page.
+ *
+ * Sections, in order, because the order is the argument: name the problem,
+ * show it is three steps, show what you get, be plain about what costs money,
+ * answer the objections, then say what we are not. Anything that isn't part of
+ * that argument doesn't belong here.
+ *
+ * Built phone-first. Every stack is single-column until `sm`, the primary
+ * action is full-width and thumb-reachable at each stage, and nothing
+ * important sits behind a hover.
+ */
 
 const STEPS = [
   {
     n: '01',
     icon: UserRoundPen,
-    title: 'Tell us about you',
-    body: 'One short form — your current name, your new name, and where you got married. Five minutes, once.',
+    title: 'Answer a few questions',
+    body: 'Your current name, your new name, where you married, and which of a dozen circumstances apply. About five minutes, once.',
   },
   {
     n: '02',
     icon: ClipboardList,
-    title: 'We build your checklist',
-    body: 'Every agency, account and policy that needs to know, in the order that actually works.',
+    title: 'Get your checklist',
+    body: 'Every agency, account and policy that needs to know — filtered to the ones that actually apply to you, in the order that works.',
   },
   {
     n: '03',
     icon: Check,
-    title: 'Complete each change',
-    body: 'Your details ready to paste, the official link, and a record of what’s done.',
+    title: 'Work through it',
+    body: 'Your details ready to paste, the official link for each step, what to bring, and a record of what’s done.',
   },
+];
+
+const CATEGORIES = [
+  { icon: Landmark, label: 'Government', body: 'Social Security, licence, passport, voter registration, IRS.' },
+  { icon: Briefcase, label: 'Employment', body: 'HR and payroll, benefits, retirement plan, professional licences.' },
+  { icon: Banknote, label: 'Financial', body: 'Banks, credit cards, mortgage, loans, investments, credit bureaus.' },
+  { icon: ShieldCheck, label: 'Insurance', body: 'Health, auto, home or renters, life, and your beneficiaries.' },
+  { icon: Plane, label: 'Travel', body: 'Passport, TSA PreCheck, Global Entry, airline and hotel profiles.' },
+  { icon: FileText, label: 'Personal', body: 'Will, deeds, utilities, doctors, schools, subscriptions, the vet.' },
 ];
 
 export function Landing() {
   const { state, enterDemo } = useApp();
+  const { config } = useAccount();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    track('landing_viewed');
+  }, []);
 
   function startDemo() {
     enterDemo();
     navigate('/app');
   }
 
+  const startPath = state.onboarded ? '/app' : '/start';
+  const startLabel = state.onboarded ? 'Open my plan' : 'Start My Name Change';
+
   return (
     <div className="min-h-dvh bg-canvas">
-      {/* ------------------------------------------------------------ Nav */}
-      <header className="sticky top-0 z-40 border-b border-charcoal-100/70 bg-canvas/80 backdrop-blur-md">
-        <div className="container-page flex h-16 items-center justify-between">
-          <WordmarkLink />
-          <nav className="flex items-center gap-1 sm:gap-3">
-            <Link
-              to="/how-it-works"
-              className="hidden rounded-full px-3 py-2 text-sm font-medium text-charcoal-700 hover:bg-surface-sunk sm:block"
-            >
-              How it works
-            </Link>
-            <Link
-              to="/pricing"
-              className="hidden rounded-full px-3 py-2 text-sm font-medium text-charcoal-700 hover:bg-surface-sunk sm:block"
-            >
-              Pricing
-            </Link>
-            {state.onboarded ? (
-              <LinkButton to="/app" size="sm">
-                Open my plan
-              </LinkButton>
-            ) : (
-              <LinkButton to="/start" size="sm">
-                Get started
-              </LinkButton>
-            )}
-          </nav>
-        </div>
-      </header>
+      <Seo
+        title={DEFAULT_TITLE}
+        description={DEFAULT_DESCRIPTION}
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@graph': [
+            {
+              '@type': 'WebApplication',
+              name: 'AfterIDo',
+              applicationCategory: 'LifestyleApplication',
+              operatingSystem: 'Any',
+              description: DEFAULT_DESCRIPTION,
+              offers: [
+                { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free' },
+                { '@type': 'Offer', price: '19.99', priceCurrency: 'USD', name: 'Premium' },
+              ],
+            },
+            faqJsonLd(LANDING_FAQ),
+          ],
+        }}
+      />
+
+      <SiteHeader />
 
       {/* ----------------------------------------------------------- Hero */}
       <section className="relative overflow-hidden">
@@ -83,31 +117,31 @@ export function Landing() {
           aria-hidden="true"
           className="pointer-events-none absolute -top-40 left-1/2 h-[34rem] w-[52rem] -translate-x-1/2 rounded-full bg-gradient-to-b from-primary-100/70 via-primary-50/40 to-transparent blur-3xl"
         />
-        <div className="container-page relative pt-16 pb-6 sm:pt-24 lg:pt-28">
+        <div className="container-page relative pt-12 pb-6 sm:pt-20 lg:pt-24">
           <div className="mx-auto max-w-3xl text-center">
-            {/* Splash treatment: the wordmark leads, then the tagline. */}
-            <Wordmark size="xl" className="mx-auto mb-8" />
+            {/*
+              Hidden on phones. The sticky header already carries the wordmark,
+              and at this size it pushed the headline — the thing that actually
+              has to land — below the fold on an iPhone. From `sm` up there is
+              room for the splash treatment.
+            */}
+            <Wordmark size="xl" className="mx-auto mb-8 hidden sm:block" />
 
-            <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-champagne-300 bg-champagne-100 px-3.5 py-1.5 text-xs font-medium text-charcoal-900">
-              <Sparkles size={13} />
-              Built for the weeks right after the wedding
-            </p>
-
-            <h1 className="text-balance font-display text-[2.6rem] leading-[1.08] text-charcoal-900 sm:text-6xl lg:text-7xl">
-              Your new name,
+            <h1 className="text-balance font-display text-[2.35rem] leading-[1.1] text-charcoal-900 sm:text-6xl lg:text-[4.25rem]">
+              Change your name everywhere.
               <br />
-              <span className="text-primary-700">everywhere it matters.</span>
+              <span className="text-primary-700">Without the headache.</span>
             </h1>
 
             <p className="mx-auto mt-6 max-w-xl text-pretty text-lg leading-relaxed text-charcoal-700 sm:text-xl">
-              Update your name after ‘I do’ without the paperwork headache. Tell us once, and
-              we’ll walk you through every account, document and agency that still knows you by
-              your old name.
+              One personalized checklist for everything you need to update after getting married —
+              from Social Security and your driver’s license to banks, insurance, work, travel and
+              more.
             </p>
 
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <LinkButton to="/start" size="lg" className="w-full sm:w-auto">
-                Update My Name
+              <LinkButton to={startPath} size="lg" className="w-full sm:w-auto">
+                {startLabel}
                 <ArrowRight size={18} />
               </LinkButton>
               <LinkButton
@@ -116,23 +150,26 @@ export function Landing() {
                 variant="secondary"
                 className="w-full sm:w-auto"
               >
-                See How It Works
+                See how it works
               </LinkButton>
             </div>
 
-            <button
-              type="button"
-              onClick={startDemo}
-              className="mt-5 text-sm text-charcoal-500 underline underline-offset-4 transition-colors hover:text-primary-600"
-            >
-              Or look around with sample data first — no account needed
-            </button>
+            <p className="mt-5 text-sm text-charcoal-500">
+              Free to start · No account needed to begin ·{' '}
+              <button
+                type="button"
+                onClick={startDemo}
+                className="underline underline-offset-4 transition-colors hover:text-primary-600"
+              >
+                look around with sample data
+              </button>
+            </p>
           </div>
         </div>
 
         {/* Product peek */}
-        <div className="container-page relative pb-16 sm:pb-24">
-          <div className="mx-auto mt-12 max-w-2xl">
+        <div className="container-page relative pb-14 sm:pb-20">
+          <div className="mx-auto mt-10 max-w-2xl">
             <Card className="overflow-hidden shadow-lift">
               <div className="flex items-center justify-between border-b border-charcoal-100 bg-surface-sunk px-5 py-3">
                 <p className="text-sm font-medium text-charcoal-700">Sarah’s name change</p>
@@ -152,8 +189,8 @@ export function Landing() {
               <div className="flex items-center gap-2.5 bg-primary-50 px-5 py-3.5 text-sm text-primary-700">
                 <ArrowRight size={15} className="shrink-0" />
                 <span>
-                  <strong className="font-semibold">Next:</strong> Bring your 6 Points of ID to
-                  any NJ MVC licensing center.
+                  <strong className="font-semibold">Next:</strong> Bring your 6 Points of ID to any
+                  NJ MVC licensing center.
                 </span>
               </div>
             </Card>
@@ -161,13 +198,16 @@ export function Landing() {
         </div>
       </section>
 
-      {/* --------------------------------------------------------- 3 steps */}
-      <section className="border-y border-charcoal-100 bg-surface py-16 sm:py-24">
+      {/* --------------------------------------------------- How it works */}
+      <section id="how-it-works" className="border-y border-charcoal-100 bg-surface py-16 sm:py-24">
         <div className="container-page">
           <div className="mx-auto max-w-2xl text-center">
+            <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-primary-600">
+              How it works
+            </p>
             <h2 className="text-3xl text-charcoal-900 sm:text-4xl">Three steps. That’s the whole app.</h2>
             <p className="mt-3 text-lg text-charcoal-500">
-              No research. No spreadsheets. No wondering what you’ve forgotten.
+              No research. No spreadsheet. No wondering what you’ve forgotten.
             </p>
           </div>
 
@@ -188,7 +228,7 @@ export function Landing() {
         </div>
       </section>
 
-      {/* --------------------------------------------------------- Order */}
+      {/* -------------------------------------------------- Order matters */}
       <section className="py-16 sm:py-24">
         <div className="container-page grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
           <div>
@@ -202,8 +242,8 @@ export function Landing() {
               ticket.
             </p>
             <p className="mt-4 text-lg leading-relaxed text-charcoal-700">
-              AfterIDo sequences everything for you, explains why each step comes when it does,
-              and locks the ones that aren’t ready yet.
+              AfterIDo sequences everything, explains why each step comes when it does, and locks
+              the ones that aren’t ready yet.
             </p>
             <LinkButton to="/how-it-works" variant="secondary" className="mt-7">
               See the full order
@@ -219,7 +259,10 @@ export function Landing() {
               ['Passport', 'After your government ID matches.'],
               ['Everything else', 'Banks, work, insurance, and the rest of your life.'],
             ].map(([title, body], i) => (
-              <li key={title} className="flex gap-4 rounded-2xl border border-charcoal-100 bg-surface p-4">
+              <li
+                key={title}
+                className="flex gap-4 rounded-2xl border border-charcoal-100 bg-surface p-4"
+              >
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-600 font-display text-sm text-white">
                   {i + 1}
                 </span>
@@ -233,45 +276,204 @@ export function Landing() {
         </div>
       </section>
 
-      {/* -------------------------------------------------------- Features */}
+      {/* ------------------------------------------------- What you get */}
       <section className="border-t border-charcoal-100 bg-surface py-16 sm:py-24">
         <div className="container-page">
           <div className="mx-auto max-w-2xl text-center">
+            <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-primary-600">
+              What you get
+            </p>
             <h2 className="text-3xl text-charcoal-900 sm:text-4xl">
-              Everything in one place, finally
+              Seven categories. {TASKS.length} possible changes.
             </h2>
             <p className="mt-3 text-lg text-charcoal-500">
-              {TASKS.length} possible changes tracked. Only the ones that apply to you.
+              Only the ones that apply to you actually appear.
             </p>
           </div>
 
-          <div className="mt-12 grid gap-5 sm:grid-cols-2">
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {CATEGORIES.map(({ icon: Icon, label, body }) => (
+              <Card key={label} className="p-5">
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-surface-sunk text-primary-600">
+                  <Icon size={18} strokeWidth={1.8} />
+                </span>
+                <h3 className="mt-3.5 text-lg text-charcoal-900">{label}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-charcoal-500">{body}</p>
+              </Card>
+            ))}
+          </div>
+
+          <div className="mt-10 grid gap-5 sm:grid-cols-2">
             <FeatureCard
               icon={Sparkles}
               title="Type it once"
-              body="Your name, address, date of birth and marriage details are filled in on every task, laid out in the order each agency asks for them. One tap to copy."
-            />
-            <FeatureCard
-              icon={FileText}
-              title="A packet you can print"
-              body="Your whole plan as one document — information summary, document checklist, step-by-step instructions and where you left off. Take it to the DMV."
+              body="Your name, address, date of birth and marriage details are laid out on every task in the order that organization asks for them. One tap to copy."
             />
             <FeatureCard
               icon={ShieldCheck}
               title="Only official sources"
-              body="Every link goes to a government agency or the company itself. We never invent a requirement, and we tell you where each fact came from."
-            />
-            <FeatureCard
-              icon={Lock}
-              title="Careful with your details"
-              body="We never ask for your Social Security number or account numbers. In this build nothing you type leaves your device."
+              body="Every link goes to a government agency or the company itself — never an affiliate. We never invent a requirement, and we say where each fact came from."
             />
           </div>
         </div>
       </section>
 
-      {/* ------------------------------------------------------------- CTA */}
+      {/* ------------------------------------------------ Free vs Premium */}
       <section className="py-16 sm:py-24">
+        <div className="container-page">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-primary-600">
+              Pricing
+            </p>
+            <h2 className="text-3xl text-charcoal-900 sm:text-4xl">
+              Free to plan. {config.priceLabel} if you want it prepared.
+            </h2>
+            <p className="mt-3 text-lg text-charcoal-500">
+              One payment. Not a subscription. Nothing to cancel.
+            </p>
+          </div>
+
+          <div className="mx-auto mt-12 grid max-w-4xl gap-5 md:grid-cols-2">
+            <Card className="flex flex-col p-6">
+              <h3 className="text-2xl text-charcoal-900">Free</h3>
+              <p className="mt-1 text-sm text-charcoal-500">Everything you need to do it yourself.</p>
+              <p className="mt-5 font-display text-4xl text-charcoal-900">$0</p>
+              <ul className="mt-6 flex-1 space-y-2.5 text-sm text-charcoal-700">
+                {[
+                  'Your personalized checklist',
+                  'Every government step, in the right order',
+                  'Official agency links for each one',
+                  'Your details filled in once and reused',
+                  'Progress tracking',
+                ].map((f) => (
+                  <Tick key={f}>{f}</Tick>
+                ))}
+              </ul>
+              <LinkButton to={startPath} variant="secondary" block className="mt-7">
+                {startLabel}
+              </LinkButton>
+            </Card>
+
+            <Card className="flex flex-col border-primary-300 p-6 shadow-lift ring-1 ring-primary-200">
+              <span className="mb-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-primary-600 px-3 py-1 text-xs font-semibold text-white">
+                <Sparkles size={12} /> Most useful
+              </span>
+              <h3 className="text-2xl text-charcoal-900">Premium</h3>
+              <p className="mt-1 text-sm text-charcoal-500">Everything prepared, and somewhere to keep it.</p>
+              <p className="mt-5 flex items-baseline gap-2">
+                <span className="font-display text-4xl text-charcoal-900">{config.priceLabel}</span>
+                <span className="text-sm text-charcoal-400">one time</span>
+              </p>
+              <ul className="mt-6 flex-1 space-y-2.5 text-sm text-charcoal-700">
+                {[
+                  'Everything in Free',
+                  'The complete roadmap — financial, insurance, travel and personal',
+                  'State-specific guidance for your state',
+                  'Ready-to-send notification letters',
+                  'Document checklists and a vault to track them',
+                  'A printable packet for the DMV counter',
+                  'Email reminders and your own custom tasks',
+                ].map((f) => (
+                  <Tick key={f}>{f}</Tick>
+                ))}
+              </ul>
+              <LinkButton to="/premium" block className="mt-7">
+                See what’s included
+              </LinkButton>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* -------------------------------------------------------- Trust */}
+      <section className="border-y border-charcoal-100 bg-surface py-16 sm:py-24">
+        <div className="container-page grid gap-10 lg:grid-cols-2 lg:gap-16">
+          <div>
+            <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-primary-600">
+              Your information
+            </p>
+            <h2 className="text-3xl text-charcoal-900 sm:text-4xl">
+              We don’t want most of it.
+            </h2>
+            <p className="mt-4 text-lg leading-relaxed text-charcoal-700">
+              Your name, address, date of birth and marriage details are stored in your own browser
+              and never sent to us. If you make an account, the only thing on our side is your email
+              address and whether you bought Premium.
+            </p>
+            <Link
+              to="/privacy"
+              className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-primary-700 underline underline-offset-4"
+            >
+              Read the privacy policy
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          <Card className="p-6">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-sunk text-primary-600">
+              <Lock size={20} strokeWidth={1.8} />
+            </span>
+            <h3 className="mt-4 text-xl text-charcoal-900">We never ask for</h3>
+            <ul className="mt-3 space-y-2 text-charcoal-700">
+              {[
+                'Your Social Security number',
+                'Bank or credit card numbers',
+                'Your driver’s license or passport number',
+                'Any password',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2.5">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary-400" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 text-sm leading-relaxed text-charcoal-500">
+              They aren’t in the data model at all. Tasks tell you to have them ready for the
+              agency; the app never asks you to type them.
+            </p>
+          </Card>
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------- FAQ */}
+      <section className="py-16 sm:py-24">
+        <div className="container-page max-w-3xl">
+          <h2 className="text-3xl text-charcoal-900 sm:text-4xl">Questions people actually ask</h2>
+          <dl className="mt-8 space-y-6">
+            {LANDING_FAQ.map(({ q, a }) => (
+              <div key={q} className="border-t border-charcoal-100 pt-6">
+                <dt className="text-lg font-medium text-charcoal-900">{q}</dt>
+                <dd className="mt-2 leading-relaxed text-charcoal-700">{a}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
+      {/* --------------------------------------------------- Disclaimer */}
+      <section className="pb-16">
+        <div className="container-page max-w-3xl">
+          <div className="rounded-2xl border border-champagne-500/30 bg-champagne-50 p-6">
+            <h2 className="text-lg text-charcoal-900">What AfterIDo is not</h2>
+            <p className="mt-2 leading-relaxed text-charcoal-700">
+              AfterIDo is not a government agency and not a law firm, and nothing here is legal
+              advice. We cannot submit a name change on your behalf — no agency offers that to a
+              third-party app — and we can’t guarantee that any organization will accept your change
+              or how long it will take. What we do is remove the research and the retyping.
+            </p>
+            <Link
+              to="/disclaimer"
+              className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-charcoal-900 underline underline-offset-4"
+            >
+              Read the full disclaimer
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------- CTA */}
+      <section className="pb-16 sm:pb-24">
         <div className="container-page">
           <div className="relative overflow-hidden rounded-[2rem] bg-charcoal-900 px-7 py-14 text-center sm:px-14 sm:py-20">
             <div
@@ -283,12 +485,12 @@ export function Landing() {
                 It’s one afternoon, not one summer.
               </h2>
               <p className="mx-auto mt-4 max-w-lg text-lg text-white/70">
-                Start with the five minutes of questions. We’ll handle the sequencing, the
-                paperwork and the remembering.
+                Start with five minutes of questions. We’ll handle the sequencing, the paperwork and
+                the remembering.
               </p>
               <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <LinkButton to="/start" size="lg" className="w-full sm:w-auto">
-                  Update My Name
+                <LinkButton to={startPath} size="lg" className="w-full sm:w-auto">
+                  {startLabel}
                   <ArrowRight size={18} />
                 </LinkButton>
                 <Button
@@ -305,38 +507,17 @@ export function Landing() {
         </div>
       </section>
 
-      {/* ---------------------------------------------------------- Footer */}
-      <footer className="border-t border-charcoal-100 py-10">
-        <div className="container-page">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-            <WordmarkLink />
-            <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-charcoal-500">
-              <Link to="/how-it-works" className="hover:text-charcoal-900">
-                How it works
-              </Link>
-              <Link to="/pricing" className="hover:text-charcoal-900">
-                Pricing
-              </Link>
-              <Link to="/trust" className="hover:text-charcoal-900">
-                Privacy &amp; trust
-              </Link>
-              <ExternalLink href="https://www.usa.gov/name-change">
-                Official name-change info
-              </ExternalLink>
-            </nav>
-          </div>
-          <p className="mt-8 max-w-3xl text-xs leading-relaxed text-charcoal-400">{DISCLAIMER_TEXT}</p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
 
-function ExternalLink({ href, children }: { href: string; children: string }) {
+function Tick({ children }: { children: string }) {
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="hover:text-charcoal-900">
+    <li className="flex items-start gap-2.5">
+      <Check size={15} className="mt-0.5 shrink-0 text-sage-600" />
       {children}
-    </a>
+    </li>
   );
 }
 
@@ -405,4 +586,3 @@ function FeatureCard({
     </Card>
   );
 }
-

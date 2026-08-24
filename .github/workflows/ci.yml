@@ -1,0 +1,42 @@
+name: CI
+
+# Runs on every pull request and every push to main.
+#
+# The two deploy workflows only run *after* a merge, which meant a pull request
+# had nothing checking it at all — a broken build would only surface once it was
+# already on main and heading for the live site. This is the gate that stops
+# that, and it is the same command a contributor runs locally: `npm run check`
+# is typecheck, then the security tests, then the production build.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Split out rather than a single `npm run check`, so a red X names the
+      # thing that broke instead of making someone open the log to find out.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Security tests
+        run: npm test
+
+      - name: Build
+        run: npm run build

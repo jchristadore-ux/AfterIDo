@@ -1,0 +1,55 @@
+{
+  // AfterIDo runs as a single Cloudflare Worker that serves the built SPA from
+  // ./dist and answers /api/* itself. One free-tier service covers hosting,
+  // the API, and the database — see LAUNCH_GUIDE.md for the setup steps.
+  "name": "afterido",
+  "main": "worker/index.ts",
+  "compatibility_date": "2025-11-01",
+
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // Deep links like /app/checklist are client-side routes, so anything that
+    // isn't a real file must return index.html rather than a 404.
+    "not_found_handling": "single-page-application",
+    // The Worker sees HTML and API requests, because it rewrites each page's
+    // title and link-preview tags for the route being served (worker/seo.ts)
+    // and generates robots.txt and sitemap.xml. The hashed assets and icons
+    // are excluded: they are the bulk of the request volume, and served
+    // straight from the edge they cost nothing against the free tier.
+    "run_worker_first": [
+      "/*",
+      "!/assets/*",
+      "!/*.png",
+      "!/*.svg",
+      "!/*.ico",
+      "!/*.webmanifest"
+    ]
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "afterido",
+      // Replaced by the id that `wrangler d1 create afterido` prints.
+      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Hourly sweep that sends any reminder emails that have come due.
+  "triggers": { "crons": ["0 * * * *"] },
+
+  "vars": {
+    // Public, non-secret configuration. Secrets are set with
+    // `wrangler secret put NAME` and never appear in this file:
+    //   SESSION_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY
+    "PUBLIC_ORIGIN": "",
+    "STRIPE_PRICE_ID": "",
+    "EMAIL_FROM": "",
+    "SUPPORT_EMAIL": "support@example.com",
+    "PRICE_LABEL": "$19.99"
+  },
+
+  "observability": { "enabled": true }
+}

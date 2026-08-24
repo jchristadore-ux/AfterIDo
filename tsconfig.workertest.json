@@ -1,0 +1,19 @@
+{
+  // The Worker's tests run under Node, not the Workers runtime, so they get
+  // both sets of globals — `crypto` and `fetch` from the DOM-ish lib, plus
+  // `Buffer` and `process` from Node.
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "strict": true,
+    "types": ["node", "@cloudflare/workers-types"]
+  },
+  "include": ["worker/**/*.test.mts"]
+}

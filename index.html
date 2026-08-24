@@ -7,11 +7,41 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <meta name="theme-color" content="#FFFFFF" />
+
+    <!--
+      Defaults. These are the values every crawler that doesn't run JavaScript
+      sees, so they have to stand on their own.
+
+      On Cloudflare the Worker streams this HTML through HTMLRewriter and swaps
+      in the right title, description and canonical URL for the route being
+      requested (worker/seo.ts) — that's what makes a shared link to a state
+      guide preview as that state guide rather than as the homepage. In the
+      browser, React's <Seo> component does the same thing for Google.
+      Both read shared/seo.ts, so they can't disagree.
+    -->
+    <title>Change your name everywhere. Without the headache. | AfterIDo</title>
     <meta
       name="description"
-      content="AfterIDo is the easiest way to update your name after &lsquo;I do&rsquo;. Enter your information once and get a personalized, step-by-step plan for every place that still knows you by your old name."
+      content="One personalized checklist for everything you need to update after getting married — from Social Security and your driver&rsquo;s license to banks, insurance, work, travel and more."
     />
-    <title>AfterIDo — Your new name, everywhere it matters.</title>
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AfterIDo" />
+    <meta property="og:title" content="Change your name everywhere. Without the headache." />
+    <meta
+      property="og:description"
+      content="One personalized checklist for everything you need to update after getting married — from Social Security and your driver&rsquo;s license to banks, insurance, work, travel and more."
+    />
+    <meta property="og:image" content="/og-image.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Change your name everywhere. Without the headache." />
+    <meta
+      name="twitter:description"
+      content="One personalized checklist for everything you need to update after getting married."
+    />
+    <meta name="twitter:image" content="/og-image.png" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

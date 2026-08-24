@@ -32,7 +32,7 @@ export function isSettled(status: TaskStatus): boolean {
  */
 export function buildTaskViews(state: AppState): TaskView[] {
   const profile: Profile = state.profile;
-  const defs = tasksForProfile(profile);
+  const defs = [...tasksForProfile(profile), ...customTaskDefinitions(state)];
   const byId = new Map(defs.map((d) => [d.id, d]));
 
   return defs.map((def) => {
@@ -49,6 +49,41 @@ export function buildTaskViews(state: AppState): TaskView[] {
       stateGuidance: getStateTaskGuidance(profile.address.state, def.id),
     };
   });
+}
+
+/**
+ * Turns the user's own tasks into catalog-shaped definitions.
+ *
+ * Everything downstream — the checklist, phases, progress, the packet — reads
+ * `TaskDefinition`, so giving a custom task the same shape means none of those
+ * screens needs to know custom tasks exist.
+ *
+ * Note what is deliberately empty: no steps, no official links, no source
+ * note, and `weCan: 'submit'`. We were not told how her gym handles this and
+ * we are not going to invent it. `step: LAST_PHASE_STEP` files them under
+ * "everything else", which is where they belong — after the government
+ * paperwork that gates everything.
+ */
+const CUSTOM_TASK_STEP = 90;
+
+function customTaskDefinitions(state: AppState): TaskDefinition[] {
+  return state.customTasks.map((task) => ({
+    id: task.id,
+    title: task.title,
+    summary: 'You added this one.',
+    category: task.category,
+    priority: 'anytime' as Priority,
+    step: CUSTOM_TASK_STEP,
+    whyNow: 'Nothing else depends on this, so fit it in whenever it suits you.',
+    estimatedMinutes: [10, 30] as [number, number],
+    dependsOn: [],
+    whatYouNeed: ['A certified copy of your marriage certificate', 'Your account details'],
+    steps: [],
+    officialLinks: [],
+    prefill: ['currentFullName', 'newFullName', 'addressBlock', 'phone', 'email'],
+    weCan: 'submit' as const,
+    isCustom: true,
+  }));
 }
 
 export interface ProgressSummary {

@@ -9,6 +9,8 @@ import {
 } from 'react';
 import type {
   AppState,
+  CategoryId,
+  CustomTask,
   Plan,
   Profile,
   StoredDocument,
@@ -20,6 +22,7 @@ import { DEFAULT_TASK_STATE, buildTaskViews, summarize } from '@/lib/progress';
 import { EMPTY_STATE, clearState, loadState, saveState } from '@/lib/storage';
 import { DEMO_STATE } from '@/data/demo';
 import { canUse, type FeatureId } from '@/lib/plan';
+import { useAccount } from './AccountContext';
 
 type Action =
   | { type: 'hydrate'; state: AppState }
@@ -32,7 +35,8 @@ type Action =
   | { type: 'remove-instance'; id: string; instanceId: string }
   | { type: 'add-document'; document: StoredDocument }
   | { type: 'remove-document'; id: string }
-  | { type: 'set-plan'; plan: Plan }
+  | { type: 'add-custom-task'; title: string; category: CategoryId }
+  | { type: 'remove-custom-task'; id: string }
   | { type: 'enter-demo' }
   | { type: 'reset' };
 
@@ -46,11 +50,15 @@ function reducer(state: AppState, action: Action): AppState {
     case 'hydrate':
       return action.state;
 
+    // Editing the profile means these are real details now, not the sample
+    // ones — so the demo ends here. Without this, someone could enter the
+    // demo (which previews the Premium features) and simply type over Sarah's
+    // information to get them for free.
     case 'set-profile':
-      return { ...state, profile: action.profile };
+      return { ...state, profile: action.profile, demoMode: false };
 
     case 'complete-onboarding':
-      return { ...state, profile: action.profile, onboarded: true };
+      return { ...state, profile: action.profile, onboarded: true, demoMode: false };
 
     case 'patch-task':
       return withTask(state, action.id, action.patch);
@@ -101,8 +109,23 @@ function reducer(state: AppState, action: Action): AppState {
     case 'remove-document':
       return { ...state, documents: state.documents.filter((d) => d.id !== action.id) };
 
-    case 'set-plan':
-      return { ...state, plan: action.plan };
+    case 'add-custom-task': {
+      const custom: CustomTask = {
+        id: `custom_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        title: action.title,
+        category: action.category,
+      };
+      return { ...state, customTasks: [...state.customTasks, custom] };
+    }
+
+    case 'remove-custom-task': {
+      const { [action.id]: _removed, ...tasks } = state.tasks;
+      return {
+        ...state,
+        customTasks: state.customTasks.filter((t) => t.id !== action.id),
+        tasks,
+      };
+    }
 
     case 'enter-demo':
       return { ...DEMO_STATE };
@@ -117,6 +140,12 @@ interface AppContextValue {
   /** Catalog joined with progress — everything the UI renders comes from here. */
   tasks: ReturnType<typeof buildTaskViews>;
   progress: ReturnType<typeof summarize>;
+  /**
+   * The plan actually in force. Comes from the server for a real account; the
+   * demo previews Premium because it is explicitly labelled sample data and
+   * ends the moment anything real is typed into it.
+   */
+  plan: Plan;
   can: (feature: FeatureId) => boolean;
   setProfile: (profile: Profile) => void;
   completeOnboarding: (profile: Profile) => void;
@@ -128,7 +157,8 @@ interface AppContextValue {
   removeInstance: (id: string, instanceId: string) => void;
   addDocument: (document: StoredDocument) => void;
   removeDocument: (id: string) => void;
-  setPlan: (plan: Plan) => void;
+  addCustomTask: (title: string, category: CategoryId) => void;
+  removeCustomTask: (id: string) => void;
   enterDemo: () => void;
   reset: () => void;
 }
@@ -148,13 +178,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const tasks = useMemo(() => buildTaskViews(state), [state]);
   const progress = useMemo(() => summarize(tasks), [tasks]);
 
-  const can = useCallback((feature: FeatureId) => canUse(state.plan, feature), [state.plan]);
+  // The entitlement comes from the account, which comes from the server.
+  // `state.plan` in localStorage is not consulted — a value the browser owns
+  // is a value the browser can change.
+  const { plan: accountPlan } = useAccount();
+  const plan: Plan = state.demoMode ? 'premium' : accountPlan;
+
+  const can = useCallback((feature: FeatureId) => canUse(plan, feature), [plan]);
 
   const value = useMemo<AppContextValue>(
     () => ({
       state,
       tasks,
       progress,
+      plan,
       can,
       setProfile: (profile) => dispatch({ type: 'set-profile', profile }),
       completeOnboarding: (profile) => dispatch({ type: 'complete-onboarding', profile }),
@@ -166,14 +203,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       removeInstance: (id, instanceId) => dispatch({ type: 'remove-instance', id, instanceId }),
       addDocument: (document) => dispatch({ type: 'add-document', document }),
       removeDocument: (id) => dispatch({ type: 'remove-document', id }),
-      setPlan: (plan) => dispatch({ type: 'set-plan', plan }),
+      addCustomTask: (title, category) => dispatch({ type: 'add-custom-task', title, category }),
+      removeCustomTask: (id) => dispatch({ type: 'remove-custom-task', id }),
       enterDemo: () => dispatch({ type: 'enter-demo' }),
       reset: () => {
         clearState();
         dispatch({ type: 'reset' });
       },
     }),
-    [state, tasks, progress, can],
+    [state, tasks, progress, plan, can],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
