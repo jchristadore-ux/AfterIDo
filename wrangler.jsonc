@@ -38,10 +38,10 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "afterido",
+      "database_name": "after-i-do",
       // From Storage & Databases → D1 SQL Database → afterido, after you
       // create it. See LAUNCH_GUIDE.md step 1.
-      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+      "database_id": "f5ec300b-7be0-4184-bd56-99f6fa29aa73",
       "migrations_dir": "migrations"
     }
   ],
