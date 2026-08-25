@@ -15,7 +15,14 @@
  * paid" and is believed.
  */
 import type { Env } from './env.ts';
-import { accountsEnabled, emailEnabled, originOf, paymentsEnabled, publicConfig } from './env.ts';
+import {
+  accountsEnabled,
+  emailEnabled,
+  hasValidPriceId,
+  originOf,
+  paymentsEnabled,
+  publicConfig,
+} from './env.ts';
 import {
   clearCookie,
   fail,
@@ -108,7 +115,16 @@ async function route(
   // is checked before the same-origin gate below.
   if (path === '/api/stripe/webhook' && method === 'POST') return handleWebhook(request, env);
 
-  if (path === '/api/config' && method === 'GET') return json(publicConfig(env));
+  if (path === '/api/config' && method === 'GET') {
+    // Says why payments are off, in the logs rather than the response — the
+    // browser gets capabilities, not a description of our misconfiguration.
+    if (env.STRIPE_PRICE_ID && !hasValidPriceId(env)) {
+      console.log(
+        '[config] STRIPE_PRICE_ID is not a Price id (expected "price_…", got a Product id?). Premium stays switched off.',
+      );
+    }
+    return json(publicConfig(env));
+  }
 
   if (path === '/api/auth/callback' && method === 'GET') return handleCallback(request, env, url);
 

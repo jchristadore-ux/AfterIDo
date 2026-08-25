@@ -14,9 +14,11 @@ it a step at a time.
 |---|---|
 | Domain | **after-i-do.com** ✅ purchased |
 | Cloudflare account | ✅ `ff4b01fbc362a9e794842a52c0ce2996` |
-| `wrangler.jsonc` | ✅ pre-filled with your account and domain |
+| D1 database | ✅ `after-i-do`, id in `wrangler.jsonc` |
+| `CLOUDFLARE_API_TOKEN` | ✅ in GitHub |
 
-Three things are left: the database, Stripe, and email.
+Steps 1–3 below are done. What's left is **Stripe** (step 4, and note the Price
+vs Product id warning) and **email** (step 5).
 
 ---
 
@@ -76,11 +78,11 @@ The direct link, which skips the hunting:
 **https://dash.cloudflare.com/ff4b01fbc362a9e794842a52c0ce2996/workers/d1**
 
 1. Click **Create** (or "Create database").
-2. Name it exactly:
-   ```
-   afterido
-   ```
-   Lowercase, no hyphen. It must match what's in `wrangler.jsonc`.
+2. Name it whatever you like — `after-i-do` is what you used. Just make sure
+   `database_name` in `wrangler.jsonc` says the same thing.
+
+   (The deploy itself refers to the database by its *binding*, `DB`, so a
+   rename in the dashboard can't break it.)
 3. Leave the location on Automatic. Click Create.
 4. On the database's page, copy the **Database ID** — a long string of letters,
    numbers and hyphens.
@@ -191,7 +193,10 @@ it only sends.
 your live site uses.
 
 **Workers & Pages → afterido → Settings → Variables and Secrets.** For each,
-click Add, choose **Secret** (not Text), and paste:
+click Add, choose **Secret** (not Text), and paste.
+
+(The *Worker* is named `afterido`. That's a different thing from the database,
+which you named `after-i-do` — both are fine, they just aren't the same object.)
 
 | Name | Value | From |
 |---|---|---|
@@ -351,7 +356,7 @@ Webhooks** and click your endpoint for failed deliveries — Stripe retries for 
 to three days. You can also ask them to revisit `/premium/success`, or refund.
 
 **"I want to give someone Premium for free."**
-D1 → afterido → Console:
+D1 → your database → Console:
 ```sql
 UPDATE users SET plan = 'premium', plan_granted_at = unixepoch()
 WHERE email = 'them@example.com';
@@ -392,8 +397,9 @@ anything up.
 **A deploy failed.** GitHub → **Actions** → click the red run. The failed step
 is expanded and the error is usually the last few lines.
 
-**"D1 database not found" in the deploy log.** The database name in Cloudflare
-isn't exactly `afterido`, or the `database_id` in `wrangler.jsonc` is wrong.
+**"Couldn't find a D1 DB with the name or binding …" in the deploy log.** The
+`database_id` in `wrangler.jsonc` doesn't match a database in your account, or
+`database_name` doesn't match what you called it in the dashboard.
 
 **Sign-in emails not arriving.** In order: spam folder; Resend's dashboard for
 bounces; is `after-i-do.com` verified in Resend.
@@ -406,8 +412,7 @@ almost always the wrong URL or the wrong signing secret in Cloudflare.
 ## The short version
 
 1. ~~Cloudflare account~~ ✅ · ~~domain~~ ✅
-2. **Create the D1 database named `afterido`** — Storage & Databases, not
-   Workers & Pages
+2. **Create the D1 database** — Storage & Databases, not Workers & Pages
 3. Paste its ID into `wrangler.jsonc`
 4. One GitHub secret: `CLOUDFLARE_API_TOKEN`
 5. Stripe in test mode: product, key, webhook

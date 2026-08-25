@@ -40,6 +40,30 @@ jobs:
             echo "::notice::CLOUDFLARE_API_TOKEN is not set yet — skipping deploy. See LAUNCH_GUIDE.md."
           fi
 
+      # Catches the two configuration mistakes that otherwise surface as an
+      # opaque Cloudflare API error several minutes into a deploy, or — worse
+      # — as a Buy button that fails only when a real customer presses it.
+      - name: Check the configuration
+        if: steps.creds.outputs.ready == 'true'
+        run: |
+          fail=0
+
+          if grep -q 'REPLACE_WITH_YOUR_D1_DATABASE_ID' wrangler.jsonc; then
+            echo "::error::database_id in wrangler.jsonc is still the placeholder."
+            echo "::error::Create a D1 database at https://dash.cloudflare.com/ff4b01fbc362a9e794842a52c0ce2996/workers/d1, then paste its Database ID into wrangler.jsonc. The name is yours to choose — set database_name to match; the deploy uses the DB binding, not the name."
+            fail=1
+          fi
+
+          # A Stripe Product id (prod_) is not a Price id (price_). Checkout
+          # needs the Price. This one is a warning, not an error: the app
+          # detects it too and keeps Premium switched off rather than showing
+          # a button that cannot work, so the rest of the site still deploys.
+          if grep -qE '"STRIPE_PRICE_ID"\s*:\s*"prod_' wrangler.jsonc; then
+            echo "::warning::STRIPE_PRICE_ID looks like a Stripe *Product* id (prod_...). Checkout needs the *Price* id (price_...), found on the product's page under Pricing. Premium stays switched off until this is corrected."
+          fi
+
+          exit $fail
+
       - uses: actions/setup-node@v4
         if: steps.creds.outputs.ready == 'true'
         with:
@@ -61,11 +85,18 @@ jobs:
 
       # Runs before the deploy, so the schema is never behind the code that
       # queries it. Migrations are additive and re-running one is a no-op.
+      #
+      # `DB` is the *binding*, not the database name. wrangler accepts either,
+      # and the binding is the one that cannot drift: the database can be
+      # renamed in the Cloudflare dashboard, but the binding is what the
+      # Worker's code refers to, so it only ever changes alongside the code.
+      # Hardcoding the name here is what broke the first deploy after the
+      # database was created as "after-i-do" rather than "afterido".
       - name: Apply database migrations
         if: steps.creds.outputs.ready == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npx --yes wrangler@4 d1 migrations apply afterido --remote
+        run: npx --yes wrangler@4 d1 migrations apply DB --remote
 
       - name: Deploy
         if: steps.creds.outputs.ready == 'true'

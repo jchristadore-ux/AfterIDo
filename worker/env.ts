@@ -51,15 +51,27 @@ export function accountsEnabled(env: Env): boolean {
 }
 
 /**
- * Payments require all three: a key to create the session, a price to charge,
- * and a webhook secret to verify the result. Two out of three would let us
- * take money we could not verify, so the feature stays off.
+ * Stripe has two ids that look alike and are easy to confuse in the dashboard:
+ * a **Product** (`prod_…`) is the thing you sell, a **Price** (`price_…`) is
+ * what it costs. Checkout needs the Price. A Product id here gets as far as
+ * Stripe and comes back as an error, which surfaces to a customer as a broken
+ * Buy button — so it is treated as "not configured" instead, and the UI says
+ * Premium isn't for sale rather than offering something that cannot work.
+ */
+export function hasValidPriceId(env: Env): boolean {
+  return Boolean(env.STRIPE_PRICE_ID?.startsWith('price_'));
+}
+
+/**
+ * Payments require all three: a key to create the session, a valid price to
+ * charge, and a webhook secret to verify the result. Two out of three would let
+ * us take money we could not verify, so the feature stays off.
  */
 export function paymentsEnabled(env: Env): boolean {
   return Boolean(
     accountsEnabled(env) &&
       env.STRIPE_SECRET_KEY &&
-      env.STRIPE_PRICE_ID &&
+      hasValidPriceId(env) &&
       env.STRIPE_WEBHOOK_SECRET,
   );
 }
