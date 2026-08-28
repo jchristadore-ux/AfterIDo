@@ -35,13 +35,13 @@
     ]
   },
 
-  "d1_databases": [
+  "d1_s": [
     {
       "binding": "DB",
-      "database_name": "after-i-do",
+      "database_name": "afterido",
       // From Storage & Databases → D1 SQL Database → afterido, after you
       // create it. See LAUNCH_GUIDE.md step 1.
-      "database_id": "f5ec300b-7be0-4184-bd56-99f6fa29aa73",
+      "database_id": "93927d1f-c062-419a-b1a4-60dda795d645",
       "migrations_dir": "migrations"
     }
   ],
