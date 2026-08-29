@@ -35,9 +35,9 @@
     ]
   },
 
-  "d1_s": [
+  "d1": [
     {
-      "binding": "DB",
+      "binding": "DB"
       "database_name": "afterido",
       // From Storage & Databases → D1 SQL Database → afterido, after you
       // create it. See LAUNCH_GUIDE.md step 1.
