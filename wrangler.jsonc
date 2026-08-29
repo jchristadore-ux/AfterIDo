@@ -1,71 +1,88 @@
 {
+  "$schema": "./node_modules/wrangler/config-schema.json",
+
   // AfterIDo runs as a single Cloudflare Worker that serves the built SPA from
-  // ./dist and answers /api/* itself. One free-tier service covers hosting,
-  // the API, and the database — see LAUNCH_GUIDE.md for the setup steps.
+  // ./dist and handles /api/* itself. Cloudflare Workers + D1 provide hosting,
+  // the API, and the database.
+
   "name": "afterido",
   "main": "worker/index.ts",
-  "compatibility_date": "2025-11-01",
+  "compatibility_date": "2026-08-28",
 
-  // Not a secret — it's in the address bar of every Cloudflare dashboard page.
+  // Cloudflare account ID. This is not a secret.
   "account_id": "ff4b01fbc362a9e794842a52c0ce2996",
 
-  // Binds the Worker to the real domain and creates the DNS record for it.
-  // Until the domain is active in this Cloudflare account, comment this out
-  // and the Worker still serves at afterido.christadore.workers.dev.
-  "routes": [{ "pattern": "after-i-do.com", "custom_domain": true }],
+  // Serve the production site on the real domain.
+  "routes": [
+    {
+      "pattern": "after-i-do.com",
+      "custom_domain": true
+    }
+  ],
 
+  // Serve the Vite/React production build from Cloudflare Workers Assets.
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
-    // Deep links like /app/checklist are client-side routes, so anything that
-    // isn't a real file must return index.html rather than a 404.
+
+    // React Router deep links such as /app/checklist must resolve to index.html.
     "not_found_handling": "single-page-application",
-    // The Worker sees HTML and API requests, because it rewrites each page's
-    // title and link-preview tags for the route being served (worker/seo.ts)
-    // and generates robots.txt and sitemap.xml. The hashed assets and icons
-    // are excluded: they are the bulk of the request volume, and served
-    // straight from the edge they cost nothing against the free tier.
+
+    // Run the Worker first for HTML/API/SEO requests. Static hashed assets,
+    // images, icons, and manifests can be served directly from the edge.
     "run_worker_first": [
       "/*",
       "!/assets/*",
+      "!/*.js",
+      "!/*.css",
       "!/*.png",
+      "!/*.jpg",
+      "!/*.jpeg",
+      "!/*.gif",
+      "!/*.webp",
       "!/*.svg",
       "!/*.ico",
+      "!/*.woff",
+      "!/*.woff2",
+      "!/*.ttf",
       "!/*.webmanifest"
     ]
   },
 
-  "d1": [
+  // IMPORTANT: the Wrangler property is d1_databases, not d1.
+  // The binding name DB is what worker/env.ts and worker/index.ts use as env.DB.
+  "d1_databases": [
     {
       "binding": "DB",
       "database_name": "after-i-do",
       "database_id": "f5ec300b-7be0-4184-bd56-99f6fa29aa73",
       "migrations_dir": "migrations"
-   }
-   ],
+    }
+  ],
 
-  // Hourly sweep that sends any reminder emails that have come due.
-  "triggers": { "crons": ["0 * * * *"] },
+  // Hourly sweep that sends reminder emails that have come due.
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
 
+  // Public configuration only. Secrets belong in Cloudflare Workers
+  // Settings -> Variables and Secrets.
   "vars": {
-    // Public, non-secret configuration. Secrets are set in the dashboard under
-    // Settings → Variables and Secrets, and never appear in this file:
-    //   SESSION_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY
     "PUBLIC_ORIGIN": "https://after-i-do.com",
     "EMAIL_FROM": "AfterIDo <hello@after-i-do.com>",
 
-    // From Stripe, once the product exists. Payments stay switched off, and
-    // the UI says so, until this is filled in.
+    // This is currently a Stripe PRODUCT id, not a PRICE id.
+    // Payments intentionally remain disabled until this is replaced with
+    // the one-time Price ID beginning with "price_".
     "STRIPE_PRICE_ID": "prod_V8Gkb96HlvX2Vk",
 
-    // Shown publicly on the Contact page and in the legal pages, so choose it
-    // deliberately — this is the address real customers will write to about
-    // refunds. Until it is set, the Contact page says no address is configured
-    // rather than inventing one.
+    // Fill this with the public support/refund email before launch.
     "SUPPORT_EMAIL": "",
 
     "PRICE_LABEL": "$19.99"
   },
 
-  "observability": { "enabled": true }
+  "observability": {
+    "enabled": true
+  }
 }
