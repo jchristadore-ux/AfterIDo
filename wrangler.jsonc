@@ -35,16 +35,12 @@
     ]
   },
 
-  "d1": [
-    {
+  "d1": {
       "binding": "DB",
       "database_name": "after-i-do",
-      // From Storage & Databases → D1 SQL Database → afterido, after you
-      // create it. See LAUNCH_GUIDE.md step 1.
       "database_id": "f5ec300b-7be0-4184-bd56-99f6fa29aa73",
       "migrations_dir": "migrations"
-    }
-  ],
+   },    
 
   // Hourly sweep that sends any reminder emails that have come due.
   "triggers": { "crons": ["0 * * * *"] },
