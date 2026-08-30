@@ -92,6 +92,12 @@ jobs:
       # Worker's code refers to, so it only ever changes alongside the code.
       # Hardcoding the name here is what broke the first deploy after the
       # database was created as "after-i-do" rather than "afterido".
+      - name: Verify Cloudflare access
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx --yes wrangler@4 whoami
+
       - name: Apply database migrations
         if: steps.creds.outputs.ready == 'true'
         env:
