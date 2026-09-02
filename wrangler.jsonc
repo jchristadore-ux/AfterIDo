@@ -71,12 +71,16 @@
     "PUBLIC_ORIGIN": "https://after-i-do.com",
     "EMAIL_FROM": "AfterIDo <hello@after-i-do.com>",
 
-    // This is currently a Stripe PRODUCT id, not a PRICE id.
-    // Payments intentionally remain disabled until this is replaced with
-    // the one-time Price ID beginning with "price_".
+    // The one-time Price id ("price_…"), not the Product id ("prod_…") — see
+    // hasValidPriceId in worker/env.ts, which switches Premium off rather than
+    // show a Buy button that Stripe would reject. This value must belong to
+    // the same Stripe mode as STRIPE_SECRET_KEY: a test price with a live key
+    // (or the reverse) reaches Stripe and comes back "No such price". Whether
+    // the site is in test mode is decided by the key, not by this id, so both
+    // change together when going live.
     "STRIPE_PRICE_ID": "price_1U80DT8mCr3UaAaiA4wlbPjJ",
 
-    // Fill this with the public support/refund email before launch.
+    // Shown to customers for support and refunds.
     "SUPPORT_EMAIL": "hello@after-i-do.com",
 
     "PRICE_LABEL": "$19.99"
