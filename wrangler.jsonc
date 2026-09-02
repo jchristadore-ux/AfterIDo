@@ -74,10 +74,10 @@
     // This is currently a Stripe PRODUCT id, not a PRICE id.
     // Payments intentionally remain disabled until this is replaced with
     // the one-time Price ID beginning with "price_".
-    "STRIPE_PRICE_ID": "prod_V8Gkb96HlvX2Vk",
+    "STRIPE_PRICE_ID": "price_1U80DT8mCr3UaAaiA4wlbPjJ",
 
     // Fill this with the public support/refund email before launch.
-    "SUPPORT_EMAIL": "",
+    "SUPPORT_EMAIL": "hello@after-i-do.com",
 
     "PRICE_LABEL": "$19.99"
   },
