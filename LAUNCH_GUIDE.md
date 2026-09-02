@@ -119,9 +119,23 @@ already in the config.
 1. Go to **My Profile → API Tokens → Create Token**
    (https://dash.cloudflare.com/profile/api-tokens)
 2. Use the **Edit Cloudflare Workers** template.
-3. Under "Account Resources" make sure your account is selected; under "Zone
+3. **Add D1 to it — the template does not include D1.** Under "Permissions",
+   click **+ Add more** and set a row to **Account** · **D1** · **Edit**.
+
+   > **This is the second step my earlier draft got wrong.** Without it the
+   > token works perfectly for everything except the database, so the deploy
+   > authenticates, prints your account, and then dies on the migration step
+   > with `The given account is not valid or is not authorized to access this
+   > service [code: 7403]` — which sounds like a broken account and is
+   > actually a missing checkbox.
+
+4. Under "Account Resources" make sure your account is selected; under "Zone
    Resources" select **after-i-do.com** (or All zones).
-4. Create it and **copy the token — Cloudflare only shows it once.**
+5. Create it and **copy the token — Cloudflare only shows it once.**
+
+Already created a token without D1? You do not need a new one — open it from
+the same API Tokens page, hit **Edit**, add the D1 row, and save. The token
+value does not change, so the GitHub secret stays as it is.
 
 Then in GitHub: **Settings → Secrets and variables → Actions → New repository
 secret**

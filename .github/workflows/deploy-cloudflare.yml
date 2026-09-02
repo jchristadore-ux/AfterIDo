@@ -8,7 +8,10 @@ name: Deploy to Cloudflare
 # It stays inert until one repository secret exists, so nothing breaks while
 # the Cloudflare setup in LAUNCH_GUIDE.md is half-finished:
 #
-#   CLOUDFLARE_API_TOKEN — a token with the "Edit Cloudflare Workers" template
+#   CLOUDFLARE_API_TOKEN — the "Edit Cloudflare Workers" template PLUS the
+#   Account → D1 → Edit permission. The template alone is not enough: it does
+#   not cover D1, so the token authenticates and then the migration step fails
+#   with Cloudflare error 7403.
 #
 # The account id is not a secret (it appears in every dashboard URL) and lives
 # in wrangler.jsonc.
@@ -92,11 +95,34 @@ jobs:
       # Worker's code refers to, so it only ever changes alongside the code.
       # Hardcoding the name here is what broke the first deploy after the
       # database was created as "after-i-do" rather than "afterido".
+      # `whoami` proves the token authenticates. It does not prove the token may
+      # touch D1, and those are separate permissions: Cloudflare's "Edit
+      # Cloudflare Workers" template — the one this repo told you to use —
+      # grants Workers but not D1.
+      #
+      # A token built from that template alone passes `whoami` and then fails
+      # the very next step with:
+      #
+      #   The given account is not valid or is not authorized to access this
+      #   service [code: 7403]
+      #
+      # which names neither D1 nor the missing permission, and reads like the
+      # account is broken. So the gate asks about D1 directly, and says what to
+      # change when the answer is no.
       - name: Verify Cloudflare access
         if: steps.creds.outputs.ready == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npx --yes wrangler@4 whoami
+        run: |
+          npx --yes wrangler@4 whoami
+
+          if ! d1_out=$(npx --yes wrangler@4 d1 list 2>&1); then
+            echo "$d1_out"
+            echo "::error::The token authenticates, but is not authorised for D1 on this account."
+            echo "::error::Fix: https://dash.cloudflare.com/profile/api-tokens → edit CLOUDFLARE_API_TOKEN → add permission 'Account' + 'D1' + 'Edit', save, then re-run this workflow. The 'Edit Cloudflare Workers' template does not include D1."
+            echo "::error::If the token was created under a different Cloudflare account, recreate it under the account that owns the D1 database in wrangler.jsonc."
+            exit 1
+          fi
 
       - name: Apply database migrations
         if: steps.creds.outputs.ready == 'true'
