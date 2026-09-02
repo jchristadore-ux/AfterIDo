@@ -150,6 +150,31 @@ you're partway through.
 **Once you add it and merge, your site deploys to after-i-do.com.** Accounts
 work. Payments don't yet — that's next.
 
+### Do not connect Cloudflare's own "Workers Builds"
+
+While you are in the Cloudflare dashboard you will be offered a **Build**
+setting that connects this GitHub repository directly, so Cloudflare builds and
+deploys the Worker itself on every push. **Decline it.** GitHub Actions is
+already doing that job, from the workflow above, where the configuration is in
+version control and reviewable.
+
+Connecting both is worse than picking either one:
+
+- **It skips your migrations.** The workflow deliberately runs
+  `d1 migrations apply` *before* `wrangler deploy`, so the schema is never
+  behind the code that queries it. Workers Builds only deploys. It can put code
+  live against a database that does not have the column it is about to read.
+- **Two deploys race.** Both fire on the same push, at the same Worker, in no
+  fixed order.
+- **It fails silently.** It reports a red X to GitHub with an empty log body —
+  the reason stays in the Cloudflare dashboard, so the pull request just shows
+  a failure with nothing to read.
+
+If it is already connected, remove it: **Workers & Pages → afterido →
+Settings → Build → Disconnect**. Cloudflare also leaves behind an API token
+named `Workers Builds - <date>`; once disconnected, that token can be deleted
+from https://dash.cloudflare.com/profile/api-tokens.
+
 ---
 
 ## Step 4 — Stripe, in test mode

@@ -15,6 +15,16 @@ name: Deploy to Cloudflare
 #
 # The account id is not a secret (it appears in every dashboard URL) and lives
 # in wrangler.jsonc.
+#
+# THIS IS THE ONLY THING THAT SHOULD DEPLOY THE WORKER. Cloudflare offers a
+# second, dashboard-side deployer -- Workers Builds -- that watches the repo and
+# deploys on push all by itself. Do not connect it. It knows nothing about the
+# migration step below, so it can put code live against a database that has not
+# been migrated yet; and with both connected, two deploys race for the same
+# Worker on every push. It was connected here once and posted an instant,
+# logless red X on every pull request until it was removed. If one comes back,
+# disconnect it at Workers & Pages -> afterido -> Settings -> Build rather than
+# trying to make it pass.
 
 on:
   push:
