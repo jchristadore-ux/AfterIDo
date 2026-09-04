@@ -114,7 +114,7 @@ export async function fetchAccount(): Promise<Account | null> {
 }
 
 export function requestSignInLink(email: string, next?: string) {
-  return request<{ ok: true; delivery: 'email' | 'not-configured'; devLink?: string }>(
+  return request<{ ok: true; delivery: 'email' | 'dev-link'; devLink?: string }>(
     '/auth/request-link',
     { method: 'POST', body: JSON.stringify({ email, next }) },
   );
@@ -122,6 +122,11 @@ export function requestSignInLink(email: string, next?: string) {
 
 export function signOut() {
   return request<{ ok: true }>('/auth/signout', { method: 'POST' });
+}
+
+/** Invalidates every session this account has, on every device. */
+export function signOutEverywhere() {
+  return request<{ ok: true }>('/auth/signout-all', { method: 'POST' });
 }
 
 export function startCheckout() {

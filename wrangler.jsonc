@@ -66,17 +66,25 @@
   },
 
   // Public configuration only. Secrets belong in Cloudflare Workers
-  // Settings -> Variables and Secrets.
+  // Settings -> Variables and Secrets. The four that matter are
+  // SESSION_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and
+  // RESEND_API_KEY; until all four exist, /api/config reports the matching
+  // capability as false and the app says so rather than pretending.
   "vars": {
     "PUBLIC_ORIGIN": "https://after-i-do.com",
+
+    // Sending address. Needs the domain verified in Resend, and RESEND_API_KEY
+    // set as a secret, before any mail actually leaves.
     "EMAIL_FROM": "AfterIDo <hello@after-i-do.com>",
 
-    // This is currently a Stripe PRODUCT id, not a PRICE id.
-    // Payments intentionally remain disabled until this is replaced with
-    // the one-time Price ID beginning with "price_".
+    // The one-time Stripe PRICE id (price_...), not the Product id (prod_...).
+    // Test mode and live mode have entirely separate prices: switching Stripe
+    // to live means replacing this as well as the two Stripe secrets.
     "STRIPE_PRICE_ID": "price_1U80DT8mCr3UaAaiA4wlbPjJ",
 
-    // Fill this with the public support/refund email before launch.
+    // Shown publicly on the Contact page and in the Terms and Privacy Policy,
+    // and where refund requests arrive. This must be an address that RECEIVES
+    // mail — verifying a sending domain in Resend does not create an inbox.
     "SUPPORT_EMAIL": "hello@after-i-do.com",
 
     "PRICE_LABEL": "$19.99"

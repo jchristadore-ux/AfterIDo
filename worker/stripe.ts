@@ -86,6 +86,15 @@ export async function createCheckoutSession(args: {
     customer_email: args.email,
     'metadata[user_id]': args.userId,
     allow_promotion_codes: 'true',
+
+    // Stripe's default for a one-time payment is `if_required`, which for this
+    // checkout means "never" — no Customer is created, `session.customer` comes
+    // back null, and the column a refund later searches on is empty. The result
+    // was a refund that took the money back and left the entitlement in place.
+    // Asking for the Customer explicitly is what makes `charge.refunded`
+    // resolvable; the payment intent recorded alongside it is the belt to this
+    // brace, and covers purchases made before this line existed.
+    customer_creation: 'always',
   });
 
   // Same user, same price → same session, even if she double-taps the button.

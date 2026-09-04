@@ -16,6 +16,8 @@ export interface UserRow {
   stripe_customer_id: string | null;
   reminders_opt_in: number;
   last_seen_at: number | null;
+  /** Bumped by "sign out everywhere"; every older session cookie stops working. */
+  session_version: number;
 }
 
 /** Lowercase and trim, so "Sarah@Example.com " and "sarah@example.com" are one account. */
@@ -71,6 +73,31 @@ export async function setRemindersOptIn(
     .prepare('UPDATE users SET reminders_opt_in = ? WHERE id = ?')
     .bind(optIn ? 1 : 0, userId)
     .run();
+}
+
+/**
+ * Invalidates every session cookie this account has ever been issued.
+ *
+ * Signing out clears the cookie in the browser doing the signing out, which is
+ * no help at all to someone who has just realised their email inbox was
+ * compromised — the attacker's cookie is in a browser we cannot reach. The
+ * session's version number is checked on every request, so bumping it here is
+ * the one action that reaches all of them at once. Returns the new version.
+ */
+export async function bumpSessionVersion(db: D1Database, userId: string): Promise<number> {
+  // Two statements rather than one with RETURNING: this is the only write in
+  // the app that would need it, and it is not worth betting a security control
+  // on whether the D1 driver supports it.
+  await db
+    .prepare('UPDATE users SET session_version = session_version + 1 WHERE id = ?')
+    .bind(userId)
+    .run();
+
+  const row = await db
+    .prepare('SELECT session_version FROM users WHERE id = ?')
+    .bind(userId)
+    .first<{ session_version: number }>();
+  return row?.session_version ?? 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -136,13 +163,14 @@ export async function grantPremium(
     currency: string | null;
     livemode: boolean;
     stripeCustomerId: string | null;
+    paymentIntentId: string | null;
   },
 ): Promise<void> {
   const now = nowSeconds();
   await db.batch([
     db
       .prepare(
-        'INSERT OR IGNORE INTO purchases (id, user_id, amount_total, currency, livemode, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT OR IGNORE INTO purchases (id, user_id, amount_total, currency, livemode, created_at, payment_intent) VALUES (?, ?, ?, ?, ?, ?, ?)',
       )
       .bind(
         args.sessionId,
@@ -151,13 +179,55 @@ export async function grantPremium(
         args.currency,
         args.livemode ? 1 : 0,
         now,
+        args.paymentIntentId,
       ),
+    // A redelivered webhook takes the INSERT OR IGNORE path above and writes
+    // nothing, so the payment intent has to be backfilled separately for the
+    // case where the first write of this session had not learned it yet.
+    db
+      .prepare(
+        'UPDATE purchases SET payment_intent = COALESCE(payment_intent, ?) WHERE id = ?',
+      )
+      .bind(args.paymentIntentId, args.sessionId),
     db
       .prepare(
         "UPDATE users SET plan = 'premium', plan_granted_at = COALESCE(plan_granted_at, ?), stripe_customer_id = COALESCE(?, stripe_customer_id) WHERE id = ?",
       )
       .bind(now, args.stripeCustomerId, args.userId),
   ]);
+}
+
+/**
+ * Finds the account behind a refunded or disputed charge.
+ *
+ * Two routes, because neither is reliable alone. `stripe_customer_id` is only
+ * populated when Stripe made a Customer for the purchase — it now always does,
+ * since Checkout asks for one, but purchases made before that change have the
+ * column empty. The payment intent is carried on the purchase row and is
+ * present on every Charge object Stripe sends, which makes it the one that
+ * works for both. Tried in that order; either hit is definitive.
+ */
+export async function findUserForCharge(
+  db: D1Database,
+  args: { customerId: string | null; paymentIntentId: string | null },
+): Promise<UserRow | null> {
+  if (args.customerId) {
+    const row = await db
+      .prepare('SELECT * FROM users WHERE stripe_customer_id = ?')
+      .bind(args.customerId)
+      .first<UserRow>();
+    if (row) return row;
+  }
+
+  if (args.paymentIntentId) {
+    const purchase = await db
+      .prepare('SELECT user_id FROM purchases WHERE payment_intent = ?')
+      .bind(args.paymentIntentId)
+      .first<{ user_id: string | null }>();
+    if (purchase?.user_id) return findUserById(db, purchase.user_id);
+  }
+
+  return null;
 }
 
 /** Used when Stripe reports a refund or dispute. */
@@ -179,7 +249,11 @@ export interface ReminderRow {
   subject: string;
   body: string;
   sent_at: number | null;
+  attempts: number;
 }
+
+/** How many times a reminder is retried before it is given up on. */
+export const MAX_REMINDER_ATTEMPTS = 4;
 
 export async function replaceReminders(
   db: D1Database,
@@ -199,18 +273,47 @@ export async function replaceReminders(
   await db.batch(statements);
 }
 
+/**
+ * Reminders that have come due, oldest first.
+ *
+ * The ordering matters because the sweep takes a bounded number per run: without
+ * it, a backlog larger than the batch size would keep re-reading whichever rows
+ * the database happened to return and starve the rest indefinitely. Rows that
+ * have already failed their allowance of attempts are excluded so a permanently
+ * undeliverable address cannot fill the batch every hour forever.
+ */
 export async function dueReminders(db: D1Database, limit = 50): Promise<ReminderRow[]> {
   const result = await db
     .prepare(
-      'SELECT r.* FROM reminders r JOIN users u ON u.id = r.user_id WHERE r.sent_at IS NULL AND r.send_at <= ? AND u.reminders_opt_in = 1 LIMIT ?',
+      `SELECT r.* FROM reminders r
+         JOIN users u ON u.id = r.user_id
+        WHERE r.sent_at IS NULL
+          AND r.send_at <= ?
+          AND r.attempts < ?
+          AND u.reminders_opt_in = 1
+        ORDER BY r.send_at ASC
+        LIMIT ?`,
     )
-    .bind(nowSeconds(), limit)
+    .bind(nowSeconds(), MAX_REMINDER_ATTEMPTS, limit)
     .all<ReminderRow>();
   return result.results ?? [];
 }
 
 export async function markReminderSent(db: D1Database, id: string): Promise<void> {
   await db.prepare('UPDATE reminders SET sent_at = ? WHERE id = ?').bind(nowSeconds(), id).run();
+}
+
+/**
+ * A send that did not succeed.
+ *
+ * The row is deliberately *not* marked sent — that is what used to happen, and
+ * it turned a transient mail-provider failure into a reminder the customer had
+ * asked for and silently never received. Counting the attempt instead means the
+ * next hourly sweep picks it up again, and `dueReminders` stops trying once the
+ * count says this one is not going to work.
+ */
+export async function markReminderFailed(db: D1Database, id: string): Promise<void> {
+  await db.prepare('UPDATE reminders SET attempts = attempts + 1 WHERE id = ?').bind(id).run();
 }
 
 // ---------------------------------------------------------------------------
@@ -264,5 +367,17 @@ export async function recordEvent(
   await db
     .prepare('INSERT INTO events (name, day, props, created_at) VALUES (?, ?, ?, ?)')
     .bind(name, new Date(now * 1000).toISOString().slice(0, 10), props ? JSON.stringify(props) : null, now)
+    .run();
+}
+
+/**
+ * Analytics answer "how is this doing lately", and lately is at most a year.
+ * Without this the table is the only thing in the database that grows without
+ * bound; a row per page view is small, but "small forever" is still forever.
+ */
+export async function purgeOldEvents(db: D1Database): Promise<void> {
+  await db
+    .prepare('DELETE FROM events WHERE created_at < ?')
+    .bind(nowSeconds() - 400 * 86400)
     .run();
 }

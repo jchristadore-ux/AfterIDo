@@ -46,7 +46,7 @@ export function TaskCard({ task, showPhase = false }: { task: TaskView; showPhas
         className={cx(
           'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
           task.state.status === 'complete'
-            ? 'border-sage-500 bg-sage-500 text-white'
+            ? 'border-sage-600 bg-sage-600 text-white'
             : task.state.status === 'not-applicable'
               ? 'border-charcoal-200 bg-charcoal-100 text-charcoal-400'
               : blocked

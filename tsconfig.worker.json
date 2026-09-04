@@ -15,6 +15,9 @@
     "noFallthroughCasesInSwitch": true,
     "types": ["@cloudflare/workers-types"]
   },
-  "exclude": ["worker/**/*.test.mts"],
+  // `.mts` files under worker/ are the test suite and its SQLite harness. They
+  // run under Node, not the Workers runtime, so they belong to
+  // tsconfig.workertest.json and would fail here on Node's own globals.
+  "exclude": ["worker/**/*.mts"],
   "include": ["worker", "shared"]
 }

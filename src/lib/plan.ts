@@ -62,7 +62,13 @@ export const PLAN_TIERS: PlanTier[] = [
     cadence: 'always',
     tagline: 'The full checklist, in the right order, with official links.',
     features: [
-      'Your complete personalized checklist',
+      // The complete checklist really is free — every category of it. Premium
+      // used to claim "the complete roadmap — financial, insurance, travel and
+      // personal" as something it added, which was not true of anything: the
+      // free plan has never filtered the checklist. Saying so here is what
+      // stops that bullet from being invented again.
+      'Your complete personalized checklist — every category',
+      'Government, work, financial, insurance, travel and personal',
       'Recommended order of operations',
       'Official agency links for every step',
       'Your information filled in once and reused',
@@ -78,14 +84,18 @@ export const PLAN_TIERS: PlanTier[] = [
     tagline: 'Everything prepared for you, and somewhere to keep it.',
     features: [
       'Everything in Free',
-      'The complete roadmap — financial, insurance, travel and personal',
-      'State-specific guidance for your state',
-      'Ready-to-send notification letters',
-      'Document checklists and a vault to track them',
+      'Ready-to-send notification letters, filled in from your details',
       'A printable packet for the counter',
-      'Email reminders',
+      'A document checklist and a vault to track what you have',
+      'Email reminders for the steps that need a follow-up',
       'Your own custom tasks',
       'A dated completion record when you finish',
+      // Deliberately last and deliberately qualified. In-depth, hand-verified
+      // guidance exists for one state so far; every other state gets the
+      // official agency links and a banner saying we have not checked the
+      // local specifics. Selling it as "guidance for your state" promised
+      // something most buyers would not receive.
+      'In-depth guidance where we have verified it — see coverage below',
     ],
     available: true,
     highlight: true,

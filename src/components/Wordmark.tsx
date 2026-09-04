@@ -25,6 +25,12 @@ export type WordmarkSize = keyof typeof HEIGHT;
  * cream paper field keyed to transparency so it composites on any surface
  * rather than punching a rectangle into tinted ones.
  *
+ * It ships at 900×576 on a 256-colour palette — 44 KB, down from 284 KB, which
+ * on a phone-first product was the single heaviest thing on the page. 576px is
+ * four times the tallest render below, so it still has headroom on any retina
+ * display; the palette is large enough that the ring's metallic gradient does
+ * not band, which a smaller one visibly did.
+ *
  * Note the wordmark itself is charcoal: place it on white, champagne or another
  * light surface. On a dark ground the lettering disappears and only the
  * rose-gold ring survives.

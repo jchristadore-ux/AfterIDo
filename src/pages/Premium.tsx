@@ -10,6 +10,7 @@ import { useApp } from '@/store/AppContext';
 import { track } from '@/lib/analytics';
 import { ApiError } from '@/lib/api';
 import { PRICING_FAQ, faqJsonLd } from '@/data/faq';
+import { DETAILED_STATES, STATE_NAME, US_STATES } from '@/data/states';
 
 /**
  * The paywall.
@@ -166,6 +167,8 @@ export function Premium() {
           </Callout>
         )}
 
+        <StateCoverage homeState={state.profile.address.state} priceLabel={config.priceLabel} />
+
         <section>
           <h2 className="text-2xl text-charcoal-900">Questions people actually ask</h2>
           <dl className="mt-5 space-y-5">
@@ -186,6 +189,70 @@ export function Premium() {
         </div>
       </div>
     </MarketingShell>
+  );
+}
+
+/**
+ * How much state-specific detail Premium actually contains, before she pays.
+ *
+ * This exists because the feature list used to say "state-specific guidance for
+ * your state" and in-depth guidance exists for one state. Everyone else gets
+ * the official agency links and a banner admitting the local specifics have not
+ * been verified, which is honest inside the app and was a broken promise on the
+ * pricing page. Better to lose the sale here than to take $19.99 from someone in
+ * Ohio expecting Ohio.
+ *
+ * The counts come from the guidance table itself, so this cannot drift as more
+ * states are researched — it just starts reading better.
+ */
+function StateCoverage({ homeState, priceLabel }: { homeState: string; priceLabel: string }) {
+  const detailed = DETAILED_STATES.map((code) => STATE_NAME[code]).filter(Boolean);
+  const covered = homeState !== '' && DETAILED_STATES.includes(homeState as never);
+  const homeName = homeState ? STATE_NAME[homeState] : null;
+
+  return (
+    <section>
+      <h2 className="text-2xl text-charcoal-900">What “state-specific” means today</h2>
+      <div className="mt-4 space-y-4">
+        <p className="leading-relaxed text-charcoal-700">
+          We only publish state detail we have checked against the state’s own agency pages. Right
+          now that is{' '}
+          <strong className="font-medium text-charcoal-900">
+            {detailed.length} of {US_STATES.length} states
+          </strong>
+          : {detailed.join(', ')}. There, Premium tells you which office handles each step, exactly
+          what to bring, and whether you can do it online.
+        </p>
+        <p className="leading-relaxed text-charcoal-700">
+          Everywhere else, the order of operations — which is federal, and the part people actually
+          get wrong — applies exactly the same, and you get the official links for your state’s
+          agencies. What you do not get is invented local detail, because we would rather send you
+          to the real page than guess at a document list and have you turned away at a counter.
+        </p>
+
+        {homeName && (
+          <Callout
+            tone={covered ? 'success' : 'champagne'}
+            title={
+              covered
+                ? `${homeName} is one of the verified states`
+                : `We have not verified ${homeName} yet`
+            }
+          >
+            {covered ? (
+              <>You get the full {homeName} detail: agency, documents, and what to expect there.</>
+            ) : (
+              <>
+                Everything else in Premium works exactly as described — the letters, the packet, the
+                vault, the reminders and the custom tasks are not state-specific. The {homeName}{' '}
+                steps link you to the official agency rather than to detail we have checked.
+                If that is not worth {priceLabel} to you, please don’t buy it.
+              </>
+            )}
+          </Callout>
+        )}
+      </div>
+    </section>
   );
 }
 

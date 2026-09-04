@@ -42,10 +42,19 @@ interface AccountContextValue {
     next?: string,
   ) => Promise<{ delivered: boolean; devLink?: string }>;
   signOut: () => Promise<void>;
+  signOutEverywhere: () => Promise<void>;
   beginCheckout: () => Promise<void>;
   confirmCheckout: (sessionId: string) => Promise<boolean>;
   refresh: () => Promise<void>;
   setRemindersOptIn: (optIn: boolean, reminders: api.ReminderPayload[]) => Promise<void>;
+  /**
+   * Pushes the current reminder set to the server without changing the opt-in.
+   *
+   * Used by the app whenever the reminders she has set on tasks change, so the
+   * queue the server sends from keeps matching what she can see. Without it the
+   * queue only ever reflected the instant she ticked the box.
+   */
+  syncReminders: (reminders: api.ReminderPayload[]) => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
 
@@ -110,6 +119,16 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const signOutEverywhere = useCallback(async () => {
+    setBusy(true);
+    try {
+      await api.signOutEverywhere();
+      setAccount(null);
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
   /**
    * Hands off to Stripe's hosted Checkout. The card is entered on Stripe's
    * page, on Stripe's domain — no card detail ever touches AfterIDo.
@@ -147,6 +166,16 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const remindersOptIn = account?.remindersOptIn ?? false;
+
+  const syncReminders = useCallback(
+    async (reminders: api.ReminderPayload[]) => {
+      if (!remindersOptIn) return;
+      await api.saveReminders(true, reminders);
+    },
+    [remindersOptIn],
+  );
+
   const deleteAccount = useCallback(async () => {
     await api.deleteAccount();
     setAccount(null);
@@ -161,10 +190,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       busy,
       requestSignInLink,
       signOut,
+      signOutEverywhere,
       beginCheckout,
       confirmCheckout,
       refresh,
       setRemindersOptIn,
+      syncReminders,
       deleteAccount,
     }),
     [
@@ -174,10 +205,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       busy,
       requestSignInLink,
       signOut,
+      signOutEverywhere,
       beginCheckout,
       confirmCheckout,
       refresh,
       setRemindersOptIn,
+      syncReminders,
       deleteAccount,
     ],
   );

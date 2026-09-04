@@ -85,7 +85,7 @@ export function Checklist() {
                 className={cx(
                   'flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-display text-sm',
                   phase.complete
-                    ? 'bg-sage-500 text-white'
+                    ? 'bg-sage-600 text-white'
                     : phase.current
                       ? 'bg-primary-600 text-white'
                       : 'bg-surface-sunk text-charcoal-400',

@@ -340,8 +340,9 @@ export function Landing() {
               <p className="mt-5 font-display text-4xl text-charcoal-900">$0</p>
               <ul className="mt-6 flex-1 space-y-2.5 text-sm text-charcoal-700">
                 {[
-                  'Your personalized checklist',
-                  'Every government step, in the right order',
+                  'Your complete personalized checklist',
+                  'Every category — government, work, financial, insurance, travel, personal',
+                  'All of it in the right order',
                   'Official agency links for each one',
                   'Your details filled in once and reused',
                   'Progress tracking',
@@ -367,12 +368,12 @@ export function Landing() {
               <ul className="mt-6 flex-1 space-y-2.5 text-sm text-charcoal-700">
                 {[
                   'Everything in Free',
-                  'The complete roadmap — financial, insurance, travel and personal',
-                  'State-specific guidance for your state',
                   'Ready-to-send notification letters',
-                  'Document checklists and a vault to track them',
                   'A printable packet for the DMV counter',
+                  'Document checklists and a vault to track them',
                   'Email reminders and your own custom tasks',
+                  'A dated completion record when you finish',
+                  'In-depth state guidance where we have verified it',
                 ].map((f) => (
                   <Tick key={f}>{f}</Tick>
                 ))}
@@ -540,7 +541,7 @@ function PeekRow({
         aria-hidden="true"
         className={
           done
-            ? 'flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sage-500 text-white'
+            ? 'flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sage-600 text-white'
             : current
               ? 'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-primary-500'
               : 'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-charcoal-200'

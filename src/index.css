@@ -19,26 +19,35 @@
   --font-display:
     'Playfair Display', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
 
-  /* ---- Brand: rose-gold ------------------------------------------------ */
-  --color-primary: #d4a5a5; /* exact brand value */
+  /* ---- Brand: rose-gold ------------------------------------------------ *
+   *
+   * Two jobs, and only one of them can use the brand hex.
+   *
+   * As a *surface* — a button fill, a badge, a filled circle — the exact brand
+   * rose-gold is what ships, unchanged. As *lettering*, on white or on the
+   * rose-gold itself, it was a legibility failure rather than a style choice:
+   * white on #D4A5A5 measures 2.16:1 where WCAG AA wants 4.5:1, and the old
+   * 600/700 steps read at 3.12:1 and 4.10:1 as text on white — all three fail.
+   *
+   * So: the fills below 500 keep the brand exactly. The steps from 600 up are
+   * the ink, dark enough to clear 4.5:1 against white — which, because contrast
+   * is symmetric, is the same thing as white lettering being legible on them.
+   * The primary button now sets charcoal on the brand fill (5.09:1) rather than
+   * white, which keeps the button looking like the brand and readable at once.
+   */
+  --color-primary: #d4a5a5; /* exact brand value — fills only */
   --color-primary-50: #fbf5f5;
   --color-primary-100: #f6eaea;
-  --color-primary-200: #ecd6d6;
-  --color-primary-300: #e0bdbd;
+  --color-primary-200: #ecd6d6; /* primary-button hover, under charcoal text */
+  --color-primary-300: #e0bdbd; /* primary-button active, under charcoal text */
   --color-primary-400: #d4a5a5;
   --color-primary-500: #c99494;
-  --color-primary-600: #bd8383; /* hover */
-  --color-primary-700: #a86e6e; /* active */
-  /*
-   * Text-on-white only. The brand rose-gold reads at 2.16:1 against white and
-   * primary-700 at 4.10:1 — both below the 4.5:1 needed for body text. This is
-   * the lightest shade of the same hue that clears it (4.51:1), computed
-   * rather than eyeballed; it is `ACCESSIBLE_ALTERNATES.primary` in brand.ts.
-   *
-   * Every *fill* still uses the exact brand hex, so the palette looks the same.
-   * This is only for brand-coloured lettering on a light surface, where the
-   * brand value is not a style choice but a legibility failure.
-   */
+  /* 4.63:1 on white. Ink: eyebrow labels, and fills that carry white text. */
+  --color-primary-600: #976969;
+  /* 6.36:1 on white. Darker ink, focus rings, hover on the 600 fills. */
+  --color-primary-700: #7d5555;
+  /* 4.51:1 on white. The lightest ink that still passes; brand.ts calls this
+   * ACCESSIBLE_ALTERNATES.primary. Kept for the outline button's lettering. */
   --color-primary-800: #8e6f6f;
 
   /* ---- Brand: champagne ------------------------------------------------ */
@@ -49,30 +58,46 @@
   --color-champagne-300: #e8d5c4;
   --color-champagne-500: #d8bda3;
 
-  /* ---- Brand: sage (success) ------------------------------------------ */
-  --color-sage: #7a9e9f; /* exact brand value */
+  /* ---- Brand: sage (success) ------------------------------------------ *
+   * Same split as the rose-gold. The brand sage is the tick, the badge and the
+   * quiet fills; 600 and 700 are the ink, at 4.53:1 on white, which is what the
+   * "Completed" button and every piece of sage lettering now sit on. White on
+   * the unmodified brand sage measured 2.91:1.
+   */
+  --color-sage: #7a9e9f; /* exact brand value — fills only */
   --color-sage-50: #f1f6f6;
   --color-sage-100: #e2ecec;
   --color-sage-200: #cadddd;
   --color-sage-300: #a8c4c5;
   --color-sage-500: #7a9e9f;
-  --color-sage-600: #6b8e8f; /* hover */
-  --color-sage-700: #5c7c7d; /* active */
+  --color-sage-600: #5d7c7c; /* 4.53:1 — ink, and the success fill */
+  --color-sage-700: #4d6869; /* 6.00:1 — hover on that fill */
+  --color-sage-800: #405657; /* active */
 
-  /* ---- Brand: charcoal (all text) ------------------------------------- */
+  /* ---- Brand: charcoal (all text) ------------------------------------- *
+   * 400 and 500 were the captions and the tertiary text, at 2.91:1 and 4.30:1
+   * — the two most-used greys in the app and neither of them readable to the
+   * standard. Both now clear 4.5:1 while keeping a visible step between them.
+   */
   --color-charcoal: #2c3e50; /* exact brand value */
   --color-charcoal-900: #2c3e50;
-  --color-charcoal-700: #4a5c6e; /* secondary text */
-  --color-charcoal-500: #6b7c8c; /* tertiary text */
-  --color-charcoal-400: #8b99a6; /* captions, placeholders */
+  --color-charcoal-700: #4a5c6e; /* secondary text — 6.89:1 */
+  --color-charcoal-500: #5d6b79; /* tertiary text — 5.46:1 */
+  --color-charcoal-400: #667585; /* captions — 4.72:1 */
+  --color-charcoal-300: #8b99a6; /* decorative only: rules, inactive icons */
   --color-charcoal-200: #d3d9df; /* borders */
   --color-charcoal-100: #e8ecef; /* hairlines */
 
-  /* ---- Brand: destructive --------------------------------------------- */
-  --color-destructive: #c97b7b; /* exact brand value */
+  /* ---- Brand: destructive --------------------------------------------- *
+   * The brand red on white measured 3.18:1, and it is the colour of the
+   * "Delete everything" button — the one place in the app where being sure of
+   * what you are clicking matters most. 600 is now the ink at 4.52:1.
+   */
+  --color-destructive: #c97b7b; /* exact brand value — fills and borders */
   --color-destructive-50: #faf1f1;
   --color-destructive-100: #f4e0e0;
-  --color-destructive-600: #b96a6a;
+  --color-destructive-600: #a56565; /* 4.52:1 — all destructive lettering */
+  --color-destructive-700: #8d5555; /* 5.89:1 — hover */
 
   /* ---- Surfaces ------------------------------------------------------- */
   --color-canvas: #ffffff; /* brand background */

@@ -34,35 +34,44 @@ export const AfterIDoBrand = {
 /**
  * Contrast note — read before changing button colors.
  *
- * The brand palette specifies white text on the primary, success and
+ * The brand palette as written specifies white text on the primary, success and
  * destructive fills, and brand-colored text on white for the outline variants.
- * Measured against WCAG 2.1 (AA wants 4.5:1 for normal text):
+ * Measured against WCAG 2.1 (AA wants 4.5:1 for normal text), that spec was:
  *
  *   white on #D4A5A5 (primary fill)        2.16:1   fails
  *   white on #7A9E9F (success fill)        2.91:1   fails
- *   white on #C97B7B (destructive fill)    3.18:1   fails
  *   #D4A5A5 text on white (outline btn)    2.16:1   fails
  *   #C97B7B text on white (destructive)    3.18:1   fails
  *   #2C3E50 on #D4A5A5                     5.09:1   passes
  *   #2C3E50 on #E8D5C4 (champagne)         7.71:1   passes
  *   #2C3E50 on #FFFFFF                    10.98:1   passes
  *
- * The brand spec is implemented exactly as written — the values above are what
- * ships. All body copy, headings and labels sit in charcoal on white or
- * champagne, which pass comfortably; the failures are confined to text inside
- * or on brand-colored buttons.
+ * ── What ships now, and why it changed ────────────────────────────────────
+ * Readability won, at the smallest cost to the brand that could be found. The
+ * split is between *surfaces* and *lettering*:
  *
- * `ACCESSIBLE_ALTERNATES` holds the lightest shade of each hue that clears
- * 4.5:1 against white, computed rather than eyeballed. Swapping a token in
- * index.css is a one-line change if the brand owner decides readability should
- * win. Nothing references these yet.
+ *   • Every fill still uses the exact brand hex. The primary button is still
+ *     #D4A5A5, the sage tick is still sage, the champagne panels are unchanged.
+ *   • The primary button's lettering is charcoal rather than white — the same
+ *     fill at 5.09:1 instead of 2.16:1 — and its hover/active states lighten
+ *     rather than darken so that stays true.
+ *   • Brand-coloured *text* uses the darker steps of the same hue
+ *     (primary-600/700/800, sage-600/700, destructive-600/700 in index.css),
+ *     each computed to clear 4.5:1 on white rather than eyeballed.
+ *
+ * Contrast is symmetric, which is what makes one value serve both jobs: a hue
+ * dark enough to read as text on white is also dark enough to carry white text.
+ *
+ * If the brand owner ever wants the original white-on-rose-gold back, the
+ * change is `VARIANT.primary` in components/ui.tsx — and it reintroduces a
+ * 2.16:1 label on the app's most-pressed button, on a phone, one-handed.
  */
 export const ACCESSIBLE_ALTERNATES = {
-  /** 4.51:1 with white text. */
+  /** 4.51:1 with white text. Ships as `--color-primary-800`. */
   primary: '#8E6F6F',
-  /** 4.55:1 with white text. */
+  /** 4.55:1 with white text. Near-identical to the shipped `--color-sage-600`. */
   success: '#5F7B7C',
-  /** 4.52:1 with white text. */
+  /** 4.52:1 with white text. Ships as `--color-destructive-600`. */
   destructive: '#A56565',
 } as const;
 

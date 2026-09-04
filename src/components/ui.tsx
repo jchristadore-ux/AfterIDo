@@ -23,15 +23,23 @@ export function cx(...parts: (string | false | null | undefined)[]): string {
 /**
  * The AfterIDo button system.
  *
- * Six variants, all pill-shaped with soft elevation, sized for thumbs. The
- * fills are the exact brand hexes:
+ * Six variants, all pill-shaped with soft elevation, sized for thumbs:
  *
- *   primary      #D4A5A5 fill, white bold text     "Mark as Updated", "Continue"
- *   secondary    white fill, #D4A5A5 border+text   "Add Another Place"
- *   success      #7A9E9F fill, white text + check  "Completed"
+ *   primary      #D4A5A5 fill, charcoal bold text  "Mark as Updated", "Continue"
+ *   secondary    white fill, rose-gold border, ink lettering
+ *   success      sage-600 fill, white text + check "Completed"
  *   disabled     #E0E0E0 fill, muted text, flat    (via the disabled attribute)
- *   destructive  white fill, #C97B7B border+text   "Remove"
+ *   destructive  white fill, red border, red ink   "Remove"
  *   ghost        text only                          low-emphasis nav
+ *
+ * ── Why the primary carries charcoal rather than white ────────────────────
+ * The brand specifies white on the rose-gold. Measured, that is 2.16:1, where
+ * WCAG AA asks 4.5:1 for text — on the app's single most important control,
+ * read one-handed on a phone, often outdoors. Charcoal on the *same* brand fill
+ * is 5.09:1. So the fill is still exactly #D4A5A5 and the button still looks
+ * like AfterIDo; only the lettering changed, and it is the change that costs
+ * the brand least. Hover and active go *lighter* rather than darker for the
+ * same reason — darkening the fill under dark text would undo it.
  *
  * `disabled` is a state rather than a variant, so it is expressed as disabled:
  * utilities on each variant — a disabled primary and a disabled secondary both
@@ -45,11 +53,11 @@ const DISABLED =
   'disabled:bg-disabled disabled:text-disabled-text disabled:border-disabled disabled:shadow-none';
 
 const VARIANT: Record<Variant, string> = {
-  primary: `bg-primary text-white font-semibold border border-transparent shadow-button hover:bg-primary-600 active:bg-primary-700 ${DISABLED}`,
+  primary: `bg-primary text-charcoal-900 font-semibold border border-transparent shadow-button hover:bg-primary-300 active:bg-primary-200 ${DISABLED}`,
   secondary: `bg-white text-primary-800 border border-primary-600 shadow-soft hover:bg-primary-50 active:bg-primary-100 ${DISABLED}`,
-  success: `bg-sage text-white font-semibold border border-transparent shadow-soft hover:bg-sage-600 active:bg-sage-700 ${DISABLED}`,
+  success: `bg-sage-600 text-white font-semibold border border-transparent shadow-soft hover:bg-sage-700 active:bg-sage-800 ${DISABLED}`,
   ghost: 'text-charcoal-700 border border-transparent hover:bg-surface-sunk hover:text-charcoal-900 disabled:text-disabled-text',
-  destructive: `bg-white text-destructive border border-destructive shadow-soft hover:bg-destructive-50 active:bg-destructive-100 ${DISABLED}`,
+  destructive: `bg-white text-destructive-600 border border-destructive shadow-soft hover:bg-destructive-50 hover:text-destructive-700 active:bg-destructive-100 ${DISABLED}`,
 };
 
 const SIZE: Record<Size, string> = {
@@ -175,7 +183,7 @@ export function Fab({
       aria-label={label}
       title={label}
       className={cx(
-        'flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-fab',
+        'flex h-14 w-14 items-center justify-center rounded-full bg-primary text-charcoal-900 shadow-fab',
         'transition-transform duration-150 hover:scale-105 active:scale-95',
         className,
       )}
@@ -619,18 +627,72 @@ export function Modal({
   footer?: ReactNode;
 }) {
   const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * Escape closes, focus goes into the dialog and stays there, and the page
+   * behind it stops scrolling.
+   *
+   * The trap is the part that was missing. `aria-modal` tells a screen reader
+   * the rest of the page is inert; it does not stop Tab walking straight out of
+   * the dialog into it, which leaves a keyboard user reading a page they cannot
+   * see and pressing Enter on controls they did not mean to. These dialogs
+   * confirm deleting an account and restoring over a plan, so that matters.
+   */
   useEffect(() => {
     if (!open) return;
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+
+    const focusable = () =>
+      Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((el) => el.offsetParent !== null || el === document.activeElement);
+
+    // The dialog itself takes focus first, so a screen reader announces the
+    // title rather than starting partway down the content.
+    dialogRef.current?.focus();
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      const items = focusable();
+      if (items.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+
+      if (e.shiftKey && (active === first || active === dialogRef.current)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      } else if (active instanceof Node && !dialogRef.current?.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      }
     };
+
     document.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
+      // Back to whatever opened the dialog, so the page does not silently
+      // dump focus at the top when it closes.
+      previouslyFocused?.focus?.();
     };
   }, [open, onClose]);
 
@@ -641,14 +703,17 @@ export function Modal({
       <button
         type="button"
         aria-label="Close"
+        tabIndex={-1}
         onClick={onClose}
         className="absolute inset-0 bg-charcoal-900/35 backdrop-blur-[2px]"
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="animate-rise relative w-full max-w-lg rounded-t-3xl bg-surface p-6 shadow-lift sm:rounded-3xl"
+        tabIndex={-1}
+        className="animate-rise relative w-full max-w-lg rounded-t-3xl bg-surface p-6 shadow-lift outline-none sm:rounded-3xl"
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <h2 id={titleId} className="text-xl">
