@@ -19,7 +19,7 @@ export interface Env {
   STRIPE_SECRET_KEY?: string;
   /** `whsec_…` — the signing secret for the checkout webhook endpoint. */
   STRIPE_WEBHOOK_SECRET?: string;
-  /** Optional. Without it, emails are logged instead of sent. */
+  /** Required for accounts. Without it a sign-in link cannot be delivered. */
   RESEND_API_KEY?: string;
 
   // ── Public vars ──────────────────────────────────────────────────────────
@@ -31,6 +31,23 @@ export interface Env {
   EMAIL_FROM?: string;
   SUPPORT_EMAIL?: string;
   PRICE_LABEL?: string;
+
+  /**
+   * Local development only. `"true"` lets the sign-in endpoint hand the link
+   * straight back in its response instead of emailing it.
+   *
+   * ── Why this needs a switch of its own ────────────────────────────────────
+   * Returning the link is the same thing as returning a password. Anyone who
+   * can POST an email address gets a working session for that account. It was
+   * previously inferred from "no mail provider configured", which meant a
+   * production deployment that had not finished its email setup handed out
+   * other people's accounts to anyone who asked. Inferring a development
+   * environment from a missing secret is not safe; this has to be deliberate.
+   *
+   * Never set this in production. `accountsEnabled` treats it as an
+   * alternative to real mail *only* so the flow can be exercised locally.
+   */
+  ALLOW_DEV_SIGNIN_LINKS?: string;
 }
 
 export interface PublicConfig {
@@ -46,8 +63,40 @@ export interface PublicConfig {
   supportEmail: string;
 }
 
+export function emailEnabled(env: Env): boolean {
+  return Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
+}
+
+/** See `Env.ALLOW_DEV_SIGNIN_LINKS`. Deliberately an exact string match. */
+export function devSignInLinksAllowed(env: Env): boolean {
+  return env.ALLOW_DEV_SIGNIN_LINKS === 'true';
+}
+
+/**
+ * Can a sign-in link actually reach the person who asked for it?
+ *
+ * Either real mail is configured, or somebody has explicitly opted into the
+ * development shortcut. If neither is true there is no safe way to sign anyone
+ * in, and accounts stay switched off rather than half-working.
+ */
+export function signInDeliverable(env: Env): boolean {
+  return emailEnabled(env) || devSignInLinksAllowed(env);
+}
+
+/**
+ * Accounts need a place to store them, a key to sign sessions with, and a way
+ * to deliver the sign-in link.
+ *
+ * The third condition is the one that is easy to leave out and expensive to
+ * get wrong: an account system that cannot email you is an account system
+ * whose only remaining way to let you in is to tell the caller the secret. The
+ * app is honest about being unable to do accounts here, which the UI already
+ * renders properly, rather than opening a door it cannot close.
+ */
 export function accountsEnabled(env: Env): boolean {
-  return Boolean(env.DB && env.SESSION_SECRET && env.SESSION_SECRET.length >= 32);
+  return Boolean(
+    env.DB && env.SESSION_SECRET && env.SESSION_SECRET.length >= 32 && signInDeliverable(env),
+  );
 }
 
 /**
@@ -66,6 +115,11 @@ export function hasValidPriceId(env: Env): boolean {
  * Payments require all three: a key to create the session, a valid price to
  * charge, and a webhook secret to verify the result. Two out of three would let
  * us take money we could not verify, so the feature stays off.
+ *
+ * `accountsEnabled` is a precondition, which now also means mail must work —
+ * correctly so. Selling a purchase that has to survive a new phone, to someone
+ * we cannot send a sign-in link or a receipt to, is selling something we cannot
+ * deliver.
  */
 export function paymentsEnabled(env: Env): boolean {
   return Boolean(
@@ -74,10 +128,6 @@ export function paymentsEnabled(env: Env): boolean {
       hasValidPriceId(env) &&
       env.STRIPE_WEBHOOK_SECRET,
   );
-}
-
-export function emailEnabled(env: Env): boolean {
-  return Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
 }
 
 export function publicConfig(env: Env): PublicConfig {
@@ -89,6 +139,43 @@ export function publicConfig(env: Env): PublicConfig {
     priceLabel: env.PRICE_LABEL || '$19.99',
     supportEmail: env.SUPPORT_EMAIL || '',
   };
+}
+
+/**
+ * Why a capability is off, for the logs.
+ *
+ * The browser gets capabilities; the operator gets the reason. Keeping the two
+ * apart means a misconfiguration is diagnosable without describing our own gaps
+ * to whoever is probing the endpoint.
+ */
+export function configWarnings(env: Env): string[] {
+  const warnings: string[] = [];
+  if (!env.DB) warnings.push('DB binding is missing — accounts and analytics are off.');
+  if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32) {
+    warnings.push('SESSION_SECRET is missing or shorter than 32 characters — accounts are off.');
+  }
+  if (!signInDeliverable(env)) {
+    warnings.push(
+      'RESEND_API_KEY is not set, so a sign-in link cannot be delivered — accounts are off. ' +
+        'Set it in Cloudflare (Workers & Pages → afterido → Settings → Variables and Secrets).',
+    );
+  }
+  if (devSignInLinksAllowed(env)) {
+    warnings.push(
+      'ALLOW_DEV_SIGNIN_LINKS is "true". Sign-in links are returned in the API response. ' +
+        'This is for local development only and must never be set on a public deployment.',
+    );
+  }
+  if (env.STRIPE_PRICE_ID && !hasValidPriceId(env)) {
+    warnings.push(
+      'STRIPE_PRICE_ID is not a Price id (expected "price_…", got a Product id?) — payments are off.',
+    );
+  }
+  if (!env.STRIPE_SECRET_KEY) warnings.push('STRIPE_SECRET_KEY is not set — payments are off.');
+  if (!env.STRIPE_WEBHOOK_SECRET) {
+    warnings.push('STRIPE_WEBHOOK_SECRET is not set — payments are off.');
+  }
+  return warnings;
 }
 
 export function originOf(env: Env, request: Request): string {

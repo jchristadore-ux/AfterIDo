@@ -12,7 +12,7 @@
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:migrate": "wrangler d1 migrations apply DB --remote",
     "deploy": "npm run build && wrangler deploy",
-    "test": "node --experimental-strip-types worker/verify.test.mts",
+    "test": "node --experimental-strip-types worker/verify.test.mts && node --experimental-strip-types --experimental-sqlite worker/entitlement.test.mts",
     "check": "npm run typecheck && npm test && npm run build"
   },
   "dependencies": {

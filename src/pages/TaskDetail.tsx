@@ -514,7 +514,7 @@ function InstanceList({
                   className={cx(
                     'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors',
                     instance.done
-                      ? 'border-sage-500 bg-sage-500 text-white'
+                      ? 'border-sage-600 bg-sage-600 text-white'
                       : 'border-charcoal-200 hover:border-primary-400',
                   )}
                 >

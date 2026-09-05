@@ -17,28 +17,35 @@ it a step at a time.
 | D1 database | ✅ `after-i-do`, id in `wrangler.jsonc` |
 | `CLOUDFLARE_API_TOKEN` | ✅ in GitHub |
 
-Steps 1–3 below are done. What's left is **Stripe** (step 4, and note the Price
-vs Product id warning) and **email** (step 5).
+Steps 1–3 below are done. What's left is **Stripe** (step 4), **email**
+(step 5 — do this one before step 6, it is no longer optional), and the four
+secrets in Cloudflare (step 6).
+
+Right now `https://after-i-do.com/api/config` reports accounts, payments and
+email all `false`: the site is up and the free checklist works, but nobody can
+create an account or buy anything until step 6 is done.
 
 ---
 
 ## What you have right now
 
-Two versions of AfterIDo exist, and it helps to keep them straight:
+**One site: after-i-do.com**, running on Cloudflare. That is the real one, and
+it is the only one.
 
-| | The preview | The real site |
-|---|---|---|
-| Where | github.io (already live) | Cloudflare |
-| Address | `jchristadore-ux.github.io/AfterIDo/` | **after-i-do.com** |
-| Free features | Work | Work |
-| Accounts | No | Yes |
-| Can take payment | **No** | **Yes** |
+There used to be a second copy on GitHub Pages at
+`jchristadore-ux.github.io/AfterIDo/`, published automatically on every change.
+That was removed before launch, and here is why it mattered: it was a complete,
+public, Google-crawlable copy of your product that **could not take payment**.
+Someone finding it in search results would do the whole five minutes of
+questions, press Buy, and be told it wasn't available — and their plan would be
+sitting on a web address they'd never find again. It also competed with
+after-i-do.com for the same search results.
 
-The preview is honest about this. It doesn't show a broken "Buy" button — the
-Premium page says plainly that it isn't connected to a payment processor.
+The code that built it is gone. **You still need to switch it off at GitHub's
+end** — see "Unpublish the old preview site" below, right after step 3.
 
-**Nothing here is optional if you want to charge money.** A site that only
-serves files — which is what the preview is — has nowhere to verify a payment.
+**Nothing in this guide is optional if you want to charge money.** A site that
+only serves files has nowhere to verify a payment.
 
 ---
 
@@ -177,6 +184,27 @@ from https://dash.cloudflare.com/profile/api-tokens.
 
 ---
 
+## Step 3b — Unpublish the old preview site
+
+**Time: 2 minutes.** Do this once.
+
+The workflow that published `jchristadore-ux.github.io/AfterIDo/` has been
+deleted, so nothing will update it again — but the last copy it published is
+still online and still findable by Google. Take it down.
+
+1. Go to **https://github.com/jchristadore-ux/AfterIDo**
+2. Click **Settings** (top of the page, on the right)
+3. Left sidebar → **Pages**
+4. Under **Build and deployment**, change **Source** to **None**
+
+   (If there is no "None" option, look for an **Unpublish site** button on the
+   same page and click that instead.)
+
+**Check it worked:** open `https://jchristadore-ux.github.io/AfterIDo/` in a
+private browsing window. You should get a 404, not your app.
+
+---
+
 ## Step 4 — Stripe, in test mode
 
 **Time: 20 minutes.** Test mode first. You cannot take real money until step 7,
@@ -211,18 +239,48 @@ pay and get nothing.
 
 ## Step 5 — Resend, for email
 
-**Time: 10 minutes.** You can skip this and come back — sign-in links just
-won't send until you do.
+**Time: 10 minutes. This is not optional and it is not last.**
+
+> **Do this before you put the secrets in (step 6).** Signing in works by
+> emailing you a link. If accounts were switched on with no way to send that
+> email, the only remaining way to let anyone in would be to hand the link back
+> to whoever asked for it — which would mean anyone could type a customer's
+> email address and be signed in as them.
+>
+> The app now refuses to run in that state: with no mail provider configured it
+> reports accounts as unavailable and says so, rather than opening that door.
+> Payments stay off too, which is correct — you cannot sell something that has
+> to survive a new phone to someone you cannot email.
 
 1. Create an account at **resend.com**.
 2. **Domains → Add Domain** → `after-i-do.com`. Since the domain is on
    Cloudflare, Resend can usually add the DNS records for you; otherwise copy
    them into Cloudflare's **DNS** section.
-3. **API Keys → Create API Key** → copy it (`re_...`).
+3. Wait for the domain to show **Verified** with a green tick.
+4. **API Keys → Create API Key** → copy it (`re_...`).
 
 The from-address is already set to `AfterIDo <hello@after-i-do.com>`, which
-works once the domain verifies. You don't need a real inbox at that address —
-it only sends.
+works once the domain verifies.
+
+### And separately: an inbox that RECEIVES
+
+Verifying the domain in Resend lets the site **send** from
+`hello@after-i-do.com`. It does **not** create a mailbox there.
+
+That address is printed on your Contact page, your Terms and your Privacy
+Policy as where to write about refunds and data deletion. If nothing receives
+it, every refund request vanishes and you get chargebacks instead.
+
+Set up forwarding, which is free:
+
+1. **dash.cloudflare.com** → click **after-i-do.com**
+2. Left sidebar → **Email** → **Email Routing** → enable it if prompted
+3. **Routing rules** → **Create address**
+4. Custom address: `hello` · Action: **Send to an email** · Destination: your
+   real inbox
+5. Click the verification link Cloudflare emails you
+6. **Test it**: send an email to `hello@after-i-do.com` from your phone and
+   check it arrives
 
 ---
 
@@ -242,7 +300,17 @@ which you named `after-i-do` — both are fine, they just aren't the same object
 | `SESSION_SECRET` | a long random string — see below | you make it up |
 | `STRIPE_SECRET_KEY` | `sk_test_...` | step 4.4 |
 | `STRIPE_WEBHOOK_SECRET` | `whsec_...` | step 4.5 |
-| `RESEND_API_KEY` | `re_...` | step 5.3 |
+| `RESEND_API_KEY` | `re_...` | step 5.4 |
+
+All four, or nothing works — and the site tells you which are missing. Open
+**https://after-i-do.com/api/config** in a browser afterwards; you want to see
+`"accounts":true`, `"payments":true` and `"email":true`. `"testMode":true` is
+correct at this stage.
+
+> **Never add a variable called `ALLOW_DEV_SIGNIN_LINKS`.** It exists so the
+> sign-in flow can be tested on a laptop with no mail account, and it makes the
+> site print sign-in links instead of emailing them. On a public site it would
+> let anyone sign in as anyone.
 
 **For `SESSION_SECRET`**: open a new browser tab, press F12, click Console,
 paste this and press Enter:
@@ -289,14 +357,31 @@ On your phone, go to **after-i-do.com** and do the whole thing as a customer:
 - [ ] **The receipt email arrives**
 - [ ] Sign out, sign in again — Premium is still there
 
+Now the paid features, which is where a refund request comes from if they don't
+work:
+
+- [ ] Profile → tick **"Email me when something is due"**
+- [ ] Open any task, set a reminder on it for a time in the near future
+- [ ] Wait for the top of the next hour. **The reminder email arrives.**
+      (The sweep runs hourly, so a reminder set at 2:10 for 2:15 sends at 3:00.)
+- [ ] Profile → **Save a backup**. A `.json` file downloads.
+- [ ] Profile → **Restore from a backup**, pick that file, confirm. Your plan
+      is unchanged.
+
 Now test that failure works properly:
 
 - [ ] Sign out, open Pricing — it asks you to make an account first, rather than
       offering a broken button
 - [ ] Start checkout and press **back** on Stripe's page instead of paying. You
       return with "your payment was cancelled" and **Premium stays locked.**
+- [ ] **Refund your own test payment** in Stripe → Payments → your payment →
+      Refund. Wait a minute, reload AfterIDo. **Premium is gone.**
+- [ ] Profile → **Sign out everywhere**. You are signed out. Sign back in with a
+      fresh link and Premium is still there.
 
 **If Premium ever unlocks without a payment, stop and do not go live.**
+**If a full refund does not remove Premium, stop and do not go live** — that is
+someone getting your product for free every time you are generous.
 
 ### Going live
 
@@ -446,6 +531,44 @@ bounces; is `after-i-do.com` verified in Resend.
 **Payments not unlocking Premium.** Check the webhook in Stripe first — it's
 almost always the wrong URL or the wrong signing secret in Cloudflare.
 
+**"Accounts aren't available" on the live site.** Open
+`https://after-i-do.com/api/config`. Whichever of `accounts`, `payments` and
+`email` says `false` is what to fix:
+
+| What's false | What's missing |
+|---|---|
+| `email` | `RESEND_API_KEY` in Cloudflare, or the domain isn't verified in Resend |
+| `accounts` | `SESSION_SECRET` (must be 32+ characters), the D1 binding, **or** `email` above — accounts need all three |
+| `payments` | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, a `price_...` id, **or** `accounts` above |
+
+The Worker's **Logs** (Workers & Pages → afterido → Logs) spell out the exact
+reason on every request to `/api/config`.
+
+**A refund didn't remove Premium.** Look at Stripe → Developers → Webhooks →
+your endpoint, for a failed `charge.refunded` delivery. If it delivered fine and
+Premium is still on, tell Claude Code — that is a bug, not a setting.
+
+**Nobody is getting reminder emails.** They send on the hour, not immediately.
+Check the customer has Premium, is signed in, and has the box ticked in Profile.
+Then Resend's dashboard for bounces.
+
+---
+
+## Monitoring: how you find out before your customers do
+
+Nothing in this list costs anything, and without it a broken site stays broken
+until somebody emails you.
+
+1. **uptimerobot.com** — free account, then two monitors:
+   - `https://after-i-do.com` every 5 minutes
+   - `https://after-i-do.com/api/config` with **keyword monitoring**, alerting
+     when the text `"payments":true` is **not** found. That is the one that
+     catches your shop quietly closing.
+2. **Stripe** → Developers → Webhooks → your endpoint → turn on the
+   notify-on-failure setting.
+3. **Cloudflare** → Workers & Pages → afterido → **Logs** is where the detail
+   lives when an alert fires.
+
 ---
 
 ## The short version
@@ -454,12 +577,16 @@ almost always the wrong URL or the wrong signing secret in Cloudflare.
 2. **Create the D1 database** — Storage & Databases, not Workers & Pages
 3. Paste its ID into `wrangler.jsonc`
 4. One GitHub secret: `CLOUDFLARE_API_TOKEN`
-5. Stripe in test mode: product, key, webhook
-6. Resend: verify after-i-do.com, get a key
-7. Four secrets into Cloudflare; price ID and support email into `wrangler.jsonc`
-8. **Test on your phone with card 4242 4242 4242 4242**
-9. Switch Stripe to live, redo the Stripe bits, test with a real card, refund
-   yourself
-10. Check the legal pages, submit your sitemap
+5. **Unpublish the old github.io preview** — Settings → Pages → Source: None
+6. Stripe in test mode: product, key, webhook
+7. **Resend: verify after-i-do.com, get a key — and forward `hello@` to a real
+   inbox.** Do this before step 8; accounts stay off until mail works, on purpose
+8. Four secrets into Cloudflare; price ID and support email into `wrangler.jsonc`
+9. Check `/api/config` shows accounts, payments and email all `true`
+10. **Test on your phone with card 4242 4242 4242 4242** — including the refund
+11. Switch Stripe to live, redo the Stripe bits, test with a real card, refund
+    yourself
+12. Set up UptimeRobot
+13. Check the legal pages, submit your sitemap
 
 **Remaining cost to launch: $0.**

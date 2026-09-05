@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Check, RotateCcw, Save, ShieldCheck } from 'lucide-react';
+import { Check, Download, RotateCcw, Save, ShieldCheck, Upload } from 'lucide-react';
 import type { CircumstanceId, Profile as ProfileType, StateCode } from '@/types';
 import { useApp } from '@/store/AppContext';
+import { planFromJson, planToJson } from '@/lib/storage';
 import { CIRCUMSTANCES } from '@/data/categories';
 import { US_STATES } from '@/data/states';
 import { tasksForProfile } from '@/data/tasks';
@@ -317,6 +318,9 @@ export function Profile() {
       {/* ------------------------------------------------- Custom tasks */}
       <CustomTasks />
 
+      {/* --------------------------------------------------------- Backup */}
+      <PlanBackup />
+
       {/* -------------------------------------------------------- Privacy */}
       <Callout tone="success" icon={<ShieldCheck size={16} />} title="Your information">
         Everything on this page is stored in this browser and is never sent to us. We never ask
@@ -386,7 +390,137 @@ export function Profile() {
           This clears your profile, your progress and your document list from this browser. It
           cannot be undone.
         </p>
+        <p className="mt-3 text-sm text-charcoal-500">
+          If you might want it back, save a copy first — “Save a backup” above.
+        </p>
       </Modal>
     </div>
+  );
+}
+
+/**
+ * Save a copy of the plan, and put one back.
+ *
+ * Everything she types lives in this browser and nowhere else — which is the
+ * privacy promise, and also the one real way to lose weeks of work. Clearing
+ * site data, a new phone, or a browser that decides to evict storage all take
+ * the lot, and there is no copy on our side to restore because we deliberately
+ * never had one.
+ *
+ * A file she keeps herself is the only backup that doesn't compromise that, so
+ * the app has to offer one rather than leaving her to discover the problem.
+ */
+function PlanBackup() {
+  const { state, importPlan } = useApp();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState<{ state: typeof state; fileName: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [exported, setExported] = useState(false);
+
+  function download() {
+    const blob = new Blob([planToJson(state)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `afterido-plan-${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setExported(true);
+    window.setTimeout(() => setExported(false), 2500);
+  }
+
+  async function chooseFile(files: FileList | null) {
+    setError(null);
+    const file = files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('That file is too large to be an AfterIDo plan.');
+      return;
+    }
+
+    const parsed = planFromJson(await file.text());
+    if (!parsed) {
+      setError('That doesn’t look like an AfterIDo backup. Look for a file ending in .json.');
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
+
+    setPending({ state: parsed, fileName: file.name });
+    if (inputRef.current) inputRef.current.value = '';
+  }
+
+  return (
+    <section>
+      <SectionHeading title="Backup" className="mb-3" />
+      <Card className="p-5">
+        <p className="text-sm leading-relaxed text-charcoal-700">
+          Your plan is saved in <strong className="font-medium text-charcoal-900">this browser
+          only</strong>. We never receive it, which means we also cannot restore it — if you clear
+          your browsing data or move to a new phone, it is gone. Save a copy and you can put it
+          back on any device.
+        </p>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button variant="secondary" size="sm" onClick={download}>
+            {exported ? <Check size={14} /> : <Download size={14} />}
+            {exported ? 'Saved' : 'Save a backup'}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => inputRef.current?.click()}>
+            <Upload size={14} /> Restore from a backup
+          </Button>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="application/json,.json"
+            className="sr-only"
+            onChange={(e) => void chooseFile(e.target.files)}
+          />
+        </div>
+
+        {error && (
+          <Callout tone="destructive" className="mt-4">
+            {error}
+          </Callout>
+        )}
+
+        <p className="mt-4 border-t border-charcoal-100 pt-3 text-xs leading-relaxed text-charcoal-500">
+          The file holds your details and your progress. Keep it somewhere you would keep a
+          document with your address on it. Files in your document vault are never included —
+          they are never written to disk at all.
+        </p>
+      </Card>
+
+      <Modal
+        open={pending !== null}
+        onClose={() => setPending(null)}
+        title="Restore this backup?"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setPending(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (pending) importPlan(pending.state);
+                setPending(null);
+              }}
+            >
+              Restore
+            </Button>
+          </>
+        }
+      >
+        <p className="text-charcoal-700">
+          This replaces everything currently in this browser — your profile, your progress and
+          your document list — with what is in{' '}
+          <strong className="font-medium text-charcoal-900">{pending?.fileName}</strong>.
+        </p>
+        <p className="mt-3 text-sm text-charcoal-500">
+          Nothing is merged, so anything you have done on this device since that backup will be
+          replaced. Cancel and save a backup first if you are not sure.
+        </p>
+      </Modal>
+    </section>
   );
 }

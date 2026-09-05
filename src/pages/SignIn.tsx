@@ -89,10 +89,12 @@ export function SignIn({ mode }: { mode: 'sign-in' | 'create' }) {
           </p>
 
           {devLink && (
-            <Callout tone="champagne" title="Email isn’t connected yet" className="mt-5">
-              This deployment has no mail provider configured, so here is the link directly. Set
-              <code className="mx-1 rounded bg-surface-sunk px-1">RESEND_API_KEY</code>
-              to have it emailed instead.
+            <Callout tone="destructive" title="Local development only" className="mt-5">
+              This deployment has <code className="mx-1 rounded bg-surface-sunk px-1">
+                ALLOW_DEV_SIGNIN_LINKS
+              </code>
+              switched on, so the link is shown here instead of emailed. Anyone who can reach this
+              server can sign in as anyone. Never set it on a public deployment.
               <br />
               <a href={devLink} className="break-all">
                 {devLink}
@@ -110,7 +112,7 @@ export function SignIn({ mode }: { mode: 'sign-in' | 'create' }) {
       title={creating ? 'Save your plan' : 'Sign in'}
       intro={
         creating
-          ? 'One email address, so your checklist and anything you buy come with you to a new phone. No password to invent.'
+          ? 'One email address, so anything you buy comes with you to a new phone. No password to invent.'
           : 'Enter the email you used and we’ll send you a link. No password.'
       }
     >

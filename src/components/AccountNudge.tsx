@@ -20,9 +20,16 @@ import { useApp } from '@/store/AppContext';
 export function AccountNudge() {
   const { config, account, status } = useAccount();
   const { state } = useApp();
-  const [dismissed, setDismissed] = useState(
-    () => sessionStorage.getItem('afterido.nudge.dismissed') === '1',
-  );
+  const [dismissed, setDismissed] = useState(() => {
+    // Reading storage can throw outright in a locked-down browser, and this
+    // runs during render of the whole signed-in shell — an exception here
+    // would take the entire app down rather than skip a nudge.
+    try {
+      return sessionStorage.getItem('afterido.nudge.dismissed') === '1';
+    } catch {
+      return false;
+    }
+  });
 
   if (status !== 'ready' || !config.accounts || account || dismissed || state.demoMode) return null;
 
@@ -37,15 +44,26 @@ export function AccountNudge() {
 
   return (
     <div className="mb-6 flex items-center gap-3 rounded-2xl border border-champagne-500/25 bg-champagne-50 px-4 py-3 no-print">
+      {/*
+        This used to say "so nothing is lost if you switch phones", which was
+        not true and was the one sentence most likely to be believed. An account
+        carries a Premium purchase to a new device; the checklist itself stays
+        in whichever browser it was typed into. The backup file in Profile is
+        what actually moves a plan, so that is what this points at.
+      */}
       <p className="min-w-0 flex-1 text-sm leading-relaxed text-charcoal-700">
-        Your plan is saved on this device only.{' '}
+        Your plan is saved in this browser only.{' '}
         <Link
           to="/create-account"
           className="font-medium text-charcoal-900 underline underline-offset-2"
         >
           Add your email
         </Link>{' '}
-        so nothing is lost if you switch phones.
+        so anything you buy comes with you to a new phone — and save a backup from{' '}
+        <Link to="/app/profile" className="font-medium text-charcoal-900 underline underline-offset-2">
+          your profile
+        </Link>{' '}
+        to move the plan itself.
       </p>
       <button
         type="button"

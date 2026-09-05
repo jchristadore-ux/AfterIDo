@@ -251,7 +251,7 @@ export function Dashboard() {
                 <span
                   className={
                     phase.complete
-                      ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sage-500 text-white'
+                      ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sage-600 text-white'
                       : phase.current
                         ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-600 font-display text-white'
                         : 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-sunk font-display text-charcoal-400'

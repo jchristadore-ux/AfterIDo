@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BellRing, LogOut, Sparkles, Trash2 } from 'lucide-react';
+import { BellRing, LogOut, ShieldOff, Sparkles, Trash2 } from 'lucide-react';
 import { useAccount } from '@/store/AccountContext';
 import { useApp } from '@/store/AppContext';
 import { Badge, Button, Callout, Card, LinkButton, Modal, SectionHeading } from './ui';
@@ -16,8 +16,18 @@ import { buildReminderPayloads } from '@/lib/reminderSchedule';
  */
 export function AccountPanel() {
   const { state, tasks } = useApp();
-  const { account, config, plan, signOut, setRemindersOptIn, deleteAccount, busy } = useAccount();
+  const {
+    account,
+    config,
+    plan,
+    signOut,
+    signOutEverywhere,
+    setRemindersOptIn,
+    deleteAccount,
+    busy,
+  } = useAccount();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmSignOutAll, setConfirmSignOutAll] = useState(false);
   const [reminderError, setReminderError] = useState<string | null>(null);
 
   const premium = plan === 'premium';
@@ -76,12 +86,20 @@ export function AccountPanel() {
               <p className="font-medium text-charcoal-900">{account.email}</p>
               <p className="mt-1 text-sm text-charcoal-500">
                 Sign in with this address on another device and your Premium comes with you. Your
-                checklist itself stays in each browser.
+                checklist itself stays in each browser — use “Save a backup” below to move it.
               </p>
 
               <div className="mt-5 flex flex-wrap gap-2">
                 <Button variant="ghost" size="sm" onClick={() => void signOut()} disabled={busy}>
                   <LogOut size={14} /> Sign out
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setConfirmSignOutAll(true)}
+                  disabled={busy}
+                >
+                  <ShieldOff size={14} /> Sign out everywhere
                 </Button>
                 <Button
                   variant="ghost"
@@ -149,6 +167,37 @@ export function AccountPanel() {
           </Card>
         </section>
       )}
+
+      <Modal
+        open={confirmSignOutAll}
+        onClose={() => setConfirmSignOutAll(false)}
+        title="Sign out on every device?"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirmSignOutAll(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                void signOutEverywhere();
+                setConfirmSignOutAll(false);
+              }}
+            >
+              Sign out everywhere
+            </Button>
+          </>
+        }
+      >
+        <p className="text-charcoal-700">
+          This signs you out of every browser and phone you have used, including this one. Anyone
+          who was still signed in on a device you no longer have will be signed out too.
+        </p>
+        <p className="mt-3 text-sm text-charcoal-500">
+          Use this if you think someone else has been reading the email address on your account.
+          Nothing is deleted — sign back in with a fresh link any time, and your Premium is still
+          there.
+        </p>
+      </Modal>
 
       <Modal
         open={confirmDelete}

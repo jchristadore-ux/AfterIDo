@@ -5,9 +5,16 @@ import path from 'node:path';
 import { PAGE_META, canonicalUrl, stateSlug } from './shared/seo.ts';
 
 /**
- * `VITE_BASE` lets the same source deploy to a subpath without a code change.
- * GitHub Pages serves a project site from /<repo>/, so the deploy workflow sets
- * VITE_BASE=/AfterIDo/. Locally, and on Cloudflare, it stays '/'.
+ * `VITE_BASE` lets the same source deploy to a subpath without a code change —
+ * a static host that serves the app from /<repo>/ rather than the domain root.
+ * Locally, and on Cloudflare, it stays '/'.
+ *
+ * Nothing sets it any more. The GitHub Pages deployment that used to was
+ * removed before launch: it published a second, fully crawlable copy of the
+ * site that could not take payment, on a URL that competed with the real one
+ * for search results and stored a visitor's plan somewhere she would never find
+ * it again. The support is kept because it costs nothing and a preview build is
+ * occasionally useful; the automatic deploy is what was the problem.
  *
  * `VITE_ROUTER=hash` switches the app to a hash router for single-file builds
  * hosted somewhere that can't rewrite unknown paths back to index.html.

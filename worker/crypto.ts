@@ -68,6 +68,15 @@ export interface SessionClaims {
   sub: string;
   /** Expiry, epoch seconds. */
   exp: number;
+  /**
+   * The account's session version when this cookie was issued.
+   *
+   * Checked against the stored value on every request, so "sign out
+   * everywhere" is a single increment rather than a list of tokens to hunt
+   * down. Absent on cookies issued before this existed; those are treated as
+   * version 0, which is what every existing account already has.
+   */
+  v?: number;
 }
 
 export async function signSession(secret: string, claims: SessionClaims): Promise<string> {
@@ -92,6 +101,7 @@ export async function verifySession(secret: string, token: string): Promise<Sess
   try {
     const claims = JSON.parse(new TextDecoder().decode(fromBase64Url(payload))) as SessionClaims;
     if (typeof claims.sub !== 'string' || typeof claims.exp !== 'number') return null;
+    if (claims.v !== undefined && typeof claims.v !== 'number') return null;
     if (claims.exp <= Math.floor(Date.now() / 1000)) return null;
     return claims;
   } catch {

@@ -1,10 +1,16 @@
 {
   // The Worker's tests run under Node, not the Workers runtime, so they get
-  // both sets of globals — `crypto` and `fetch` from the DOM-ish lib, plus
-  // `Buffer` and `process` from Node.
+  // both sets of globals — `crypto` and `fetch` from the Workers types, plus
+  // `Buffer`, `process` and `node:*` from Node.
+  //
+  // The entitlement suite also reaches into src/ for the two pieces of
+  // customer-facing logic that decide what somebody paid for — the entitlement
+  // table and what a reminder email is allowed to contain — so the `@/` alias
+  // is here too. Those are worth testing next to the payment code they belong
+  // with rather than in isolation.
   "compilerOptions": {
     "target": "ES2023",
-    "lib": ["ES2023"],
+    "lib": ["ES2023", "DOM"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -13,7 +19,8 @@
     "moduleDetection": "force",
     "noEmit": true,
     "strict": true,
-    "types": ["node", "@cloudflare/workers-types"]
+    "types": ["node", "@cloudflare/workers-types"],
+    "paths": { "@/*": ["./src/*"], "@shared/*": ["./shared/*"] }
   },
-  "include": ["worker/**/*.test.mts"]
+  "include": ["worker/**/*.mts"]
 }

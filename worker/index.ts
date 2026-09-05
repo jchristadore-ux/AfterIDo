@@ -17,8 +17,9 @@
 import type { Env } from './env.ts';
 import {
   accountsEnabled,
+  configWarnings,
+  devSignInLinksAllowed,
   emailEnabled,
-  hasValidPriceId,
   originOf,
   paymentsEnabled,
   publicConfig,
@@ -36,14 +37,18 @@ import {
 } from './http.ts';
 import { randomToken, signSession, verifySession } from './crypto.ts';
 import {
+  bumpSessionVersion,
   dueReminders,
   findOrCreateUser,
   findUserById,
+  findUserForCharge,
   grantPremium,
   isPlausibleEmail,
+  markReminderFailed,
   markReminderSent,
   normaliseEmail,
   purgeExpiredLoginTokens,
+  purgeOldEvents,
   purgeRateLimits,
   rateLimit,
   recordEvent,
@@ -98,7 +103,11 @@ export default {
 
   /** Hourly: send reminder emails that have come due, then tidy up. */
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(runReminderSweep(env));
+    ctx.waitUntil(
+      runReminderSweep(env).catch((error) => {
+        console.log(`[cron:error] ${(error as Error)?.message ?? 'unknown'}`);
+      }),
+    );
   },
 };
 
@@ -116,13 +125,9 @@ async function route(
   if (path === '/api/stripe/webhook' && method === 'POST') return handleWebhook(request, env);
 
   if (path === '/api/config' && method === 'GET') {
-    // Says why payments are off, in the logs rather than the response — the
+    // Says why a capability is off, in the logs rather than the response — the
     // browser gets capabilities, not a description of our misconfiguration.
-    if (env.STRIPE_PRICE_ID && !hasValidPriceId(env)) {
-      console.log(
-        '[config] STRIPE_PRICE_ID is not a Price id (expected "price_…", got a Product id?). Premium stays switched off.',
-      );
-    }
+    for (const warning of configWarnings(env)) console.log(`[config] ${warning}`);
     return json(publicConfig(env));
   }
 
@@ -144,6 +149,8 @@ async function route(
       return handleRequestLink(request, env, ctx);
     case 'POST /api/auth/signout':
       return handleSignOut(request);
+    case 'POST /api/auth/signout-all':
+      return handleSignOutEverywhere(request, env);
     case 'GET /api/me':
       return handleMe(request, env);
     case 'POST /api/checkout':
@@ -167,13 +174,26 @@ function isSecureRequest(request: Request): boolean {
   return new URL(request.url).protocol === 'https:';
 }
 
+/**
+ * The signed-in account, or null.
+ *
+ * Three things have to hold, not two: the cookie's signature must verify, it
+ * must not have expired, and its session version must still match the account's.
+ * That last check is what makes "sign out everywhere" real — without it, a
+ * cookie copied off a compromised device stays valid for its full ninety days no
+ * matter what the owner does.
+ */
 async function currentUser(request: Request, env: Env): Promise<UserRow | null> {
   if (!accountsEnabled(env)) return null;
   const token = getCookie(request, SESSION_COOKIE);
   if (!token) return null;
   const claims = await verifySession(env.SESSION_SECRET as string, token);
   if (!claims) return null;
-  return findUserById(env.DB as D1Database, claims.sub);
+
+  const user = await findUserById(env.DB as D1Database, claims.sub);
+  if (!user) return null;
+  if ((claims.v ?? 0) !== (user.session_version ?? 0)) return null;
+  return user;
 }
 
 function userPayload(user: UserRow) {
@@ -195,6 +215,15 @@ function userPayload(user: UserRow) {
  * The response is identical whether or not the address already has an account.
  * Telling a caller "no such user" would turn this endpoint into a way to test
  * whether a given person uses AfterIDo, which is not ours to disclose.
+ *
+ * ── The link is never in the response ─────────────────────────────────────
+ * It goes to the inbox and nowhere else. Handing it back to the caller would
+ * mean anyone who can type an email address into this endpoint gets a working
+ * session for that account, which is the whole of the authentication system.
+ * The one exception is a local deployment that has explicitly set
+ * ALLOW_DEV_SIGNIN_LINKS, and `accountsEnabled` will not return true in
+ * production without real mail configured — so on a public deployment this
+ * branch is unreachable rather than merely unused.
  */
 async function handleRequestLink(
   request: Request,
@@ -235,13 +264,15 @@ async function handleRequestLink(
     ),
   );
 
+  // Local development only, and only when someone has deliberately switched it
+  // on. `accountsEnabled` already refuses to run an account system that cannot
+  // deliver mail, so a public deployment never reaches the true branch.
+  const showLinkLocally = devSignInLinksAllowed(env) && !emailEnabled(env);
+
   return json({
     ok: true,
-    delivery: emailEnabled(env) ? 'email' : 'not-configured',
-    // Only when mail is genuinely not wired up, and only on a test deployment,
-    // so the flow is testable before a sending domain exists. In production
-    // RESEND_API_KEY is set and this is never populated.
-    devLink: emailEnabled(env) ? undefined : link,
+    delivery: emailEnabled(env) ? 'email' : 'dev-link',
+    devLink: showLinkLocally ? link : undefined,
   });
 }
 
@@ -271,9 +302,11 @@ async function handleCallback(request: Request, env: Env, url: URL): Promise<Res
   if (!userId) return redirect('/sign-in?error=expired');
 
   await touchUser(db, userId);
+  const user = await findUserById(db, userId);
   const session = await signSession(env.SESSION_SECRET as string, {
     sub: userId,
     exp: nowSeconds() + SESSION_TTL_SECONDS,
+    v: user?.session_version ?? 0,
   });
 
   await recordEvent(db, 'account_signed_in', null);
@@ -287,6 +320,27 @@ async function handleCallback(request: Request, env: Env, url: URL): Promise<Res
 }
 
 function handleSignOut(request: Request): Response {
+  return json(
+    { ok: true },
+    { headers: { 'Set-Cookie': clearCookie(SESSION_COOKIE, isSecureRequest(request)) } },
+  );
+}
+
+/**
+ * Signs out every device, not just this one.
+ *
+ * The ordinary sign-out clears a cookie in the browser that asked, which is no
+ * use to somebody whose email inbox has been read by someone else — the other
+ * session is in a browser we cannot reach. Bumping the account's session
+ * version invalidates every cookie ever issued to it, including the one making
+ * this request, which is why it clears the local cookie too.
+ */
+async function handleSignOutEverywhere(request: Request, env: Env): Promise<Response> {
+  const user = await currentUser(request, env);
+  if (!user) return fail(401, 'signed_out', 'Not signed in.');
+
+  await bumpSessionVersion(env.DB as D1Database, user.id);
+
   return json(
     { ok: true },
     { headers: { 'Set-Cookie': clearCookie(SESSION_COOKIE, isSecureRequest(request)) } },
@@ -400,7 +454,8 @@ async function handleConfirmCheckout(request: Request, env: Env): Promise<Respon
     amountTotal: typeof session.amount_total === 'number' ? session.amount_total : null,
     currency: typeof session.currency === 'string' ? session.currency : null,
     livemode: session.livemode === true,
-    stripeCustomerId: typeof session.customer === 'string' ? session.customer : null,
+    stripeCustomerId: stripeIdOf(session.customer),
+    paymentIntentId: stripeIdOf(session.payment_intent),
   });
   await recordEvent(db, 'purchase_completed', null);
 
@@ -444,7 +499,8 @@ async function handleWebhook(request: Request, env: Env): Promise<Response> {
       amountTotal: typeof object.amount_total === 'number' ? object.amount_total : null,
       currency: typeof object.currency === 'string' ? object.currency : null,
       livemode: event.livemode,
-      stripeCustomerId: typeof object.customer === 'string' ? object.customer : null,
+      stripeCustomerId: stripeIdOf(object.customer),
+      paymentIntentId: stripeIdOf(object.payment_intent),
     });
     await recordEvent(db, 'purchase_completed', null);
 
@@ -459,8 +515,6 @@ async function handleWebhook(request: Request, env: Env): Promise<Response> {
   // A refund or a won dispute takes the entitlement back. Without this the
   // only way to reverse a purchase would be editing the database by hand.
   if (event.type === 'charge.refunded' || event.type === 'charge.dispute.closed') {
-    const customer = typeof object.customer === 'string' ? object.customer : null;
-
     // Only a full refund or a dispute we lost takes the entitlement back. A
     // partial refund — a goodwill gesture, say — must not silently lock
     // somebody out of what they still paid for.
@@ -470,17 +524,48 @@ async function handleWebhook(request: Request, env: Env): Promise<Response> {
       object.amount_refunded === object.amount;
     const disputeLost = event.type === 'charge.dispute.closed' && object.status === 'lost';
 
-    if (customer && (fullyRefunded || disputeLost)) {
-      const row = await db
-        .prepare('SELECT id FROM users WHERE stripe_customer_id = ?')
-        .bind(customer)
-        .first<{ id: string }>();
-      if (row) await revokePremium(db, row.id);
+    if (!fullyRefunded && !disputeLost) return json({ received: true });
+
+    // A dispute carries the charge it is about; a refunded charge is the object
+    // itself. Either way we want the charge's customer and payment intent,
+    // because those are the two things that lead back to an account.
+    const charge = (
+      event.type === 'charge.dispute.closed' && isRecord(object.charge) ? object.charge : object
+    ) as Record<string, unknown>;
+
+    const user = await findUserForCharge(db, {
+      customerId: stripeIdOf(charge.customer) ?? stripeIdOf(object.customer),
+      paymentIntentId: stripeIdOf(charge.payment_intent) ?? stripeIdOf(object.payment_intent),
+    });
+
+    if (user) {
+      await revokePremium(db, user.id);
+    } else {
+      // Worth knowing about: money has gone back and the entitlement has not.
+      // Better a line in the log than a silent no-op nobody can explain later.
+      console.log(
+        `[webhook] ${event.type}: no matching account for charge ${String(charge.id ?? object.id)} — Premium NOT revoked`,
+      );
     }
     return json({ received: true });
   }
 
   return json({ received: true });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+/**
+ * Stripe fields hold either an id or, when expanded, the whole object. Both
+ * shapes appear across the events we subscribe to, so every read goes through
+ * here rather than assuming one of them.
+ */
+function stripeIdOf(value: unknown): string | null {
+  if (typeof value === 'string' && value) return value;
+  if (isRecord(value) && typeof value.id === 'string' && value.id) return value.id;
+  return null;
 }
 
 /**
@@ -558,23 +643,62 @@ async function handleReminders(request: Request, env: Env): Promise<Response> {
   return json({ ok: true, scheduled: optIn ? cleaned.length : 0 });
 }
 
+/**
+ * The hourly sweep: send what has come due, then tidy up.
+ *
+ * Every step is isolated. One customer's undeliverable address used to be able
+ * to throw and take the rest of the hour's reminders down with it — along with
+ * the cleanup at the end, which then never ran at all. Now a failure is
+ * recorded against the one reminder that caused it and the sweep carries on.
+ */
 async function runReminderSweep(env: Env): Promise<void> {
   if (!accountsEnabled(env)) return;
   const db = env.DB as D1Database;
 
   for (const reminder of await dueReminders(db)) {
-    const user = await findUserById(db, reminder.user_id);
-    if (!user || user.reminders_opt_in !== 1) continue;
-    await sendEmail(env, {
-      to: user.email,
-      subject: reminder.subject,
-      text: `${reminder.body}\n\nYou set this reminder in AfterIDo. Turn reminders off any time in your profile.`,
-    });
-    await markReminderSent(db, reminder.id);
+    try {
+      const user = await findUserById(db, reminder.user_id);
+      if (!user || user.reminders_opt_in !== 1) {
+        // She turned reminders off between queueing and now. Retire the row
+        // rather than retrying it every hour until it ages out.
+        await markReminderSent(db, reminder.id);
+        continue;
+      }
+
+      const sent = await sendEmail(env, {
+        to: user.email,
+        subject: reminder.subject,
+        text: `${reminder.body}\n\nYou set this reminder in AfterIDo. Turn reminders off any time in your profile.`,
+      });
+
+      // Only a confirmed send retires the row. Marking it sent regardless is
+      // what used to turn a transient mail failure into a reminder she asked
+      // for and never received, with nothing anywhere to say so.
+      if (sent) await markReminderSent(db, reminder.id);
+      else await markReminderFailed(db, reminder.id);
+    } catch (error) {
+      console.log(
+        `[reminders] ${reminder.id} failed: ${(error as Error)?.message ?? 'unknown'}`,
+      );
+      try {
+        await markReminderFailed(db, reminder.id);
+      } catch {
+        /* the next sweep will find it again */
+      }
+    }
   }
 
-  await purgeExpiredLoginTokens(db);
-  await purgeRateLimits(db);
+  for (const [name, task] of [
+    ['login-tokens', () => purgeExpiredLoginTokens(db)],
+    ['rate-limits', () => purgeRateLimits(db)],
+    ['events', () => purgeOldEvents(db)],
+  ] as const) {
+    try {
+      await task();
+    } catch (error) {
+      console.log(`[sweep] ${name} purge failed: ${(error as Error)?.message ?? 'unknown'}`);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

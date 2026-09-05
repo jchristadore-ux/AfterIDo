@@ -94,6 +94,44 @@ export const localAdapter: PersistenceAdapter = {
 };
 
 /**
+ * Accepts a plan from outside this browser — a file she exported earlier, or
+ * one from her old phone.
+ *
+ * Anything unrecognised is dropped rather than trusted: the same `reconcile`
+ * the loader uses fills in what is missing, `demoMode` is forced off so an
+ * imported file can never masquerade as a Premium entitlement, and uploaded
+ * file bytes are never part of a plan file in the first place, so every
+ * document comes back as metadata with its contents marked absent.
+ */
+export function planFromJson(text: string): AppState | null {
+  try {
+    const parsed = JSON.parse(text) as Partial<AppState> & { plan?: unknown };
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    if (!parsed.profile && !parsed.tasks) return null;
+
+    const { plan: _droppedPlan, ...carried } = parsed;
+    const state = reconcile({ ...EMPTY_STATE, ...carried, version: STATE_VERSION } as AppState);
+
+    return {
+      ...state,
+      demoMode: false,
+      documents: state.documents.map((d) => ({ ...d, availableInSession: false })),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** The plan as a file she can keep. Pretty-printed so it is readable. */
+export function planToJson(state: AppState): string {
+  return JSON.stringify(
+    { ...state, documents: state.documents.map((d) => ({ ...d, availableInSession: false })) },
+    null,
+    2,
+  );
+}
+
+/**
  * Fills in fields added by newer builds so an older saved state still loads.
  * Real migrations would branch on `version`; this keeps the demo forgiving.
  */

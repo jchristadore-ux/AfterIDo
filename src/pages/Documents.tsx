@@ -248,7 +248,7 @@ function ChecklistOfDocuments() {
                 className={cx(
                   'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 text-[10px]',
                   held.has(kind.id)
-                    ? 'border-sage-500 bg-sage-500 text-white'
+                    ? 'border-sage-600 bg-sage-600 text-white'
                     : 'border-charcoal-200 text-charcoal-400',
                 )}
               >
