@@ -1,1 +1,3 @@
-LOADING_FROM_FILE
+line1
+line2
+line3
