@@ -1,3 +1,1 @@
-line1
-line2
-line3
+PLACEHOLDER_WILL_REPLACE
