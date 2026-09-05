@@ -1,1 +1,1 @@
-@file:///tmp/AID_LANDING_CONTENT
+file:///workspace/afterido-honesty/Landing.tsx
