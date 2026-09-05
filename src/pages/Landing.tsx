@@ -1,1 +1,1 @@
-file:///workspace/afterido-honesty/Landing.tsx
+@file:///home/box/.cursor/projects/workspace/agent-tools/Landing.tsx
