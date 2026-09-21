@@ -50,13 +50,24 @@ export interface Env {
   ALLOW_DEV_SIGNIN_LINKS?: string;
 }
 
+/** How Stripe is configured on this deployment — never guess from a missing key. */
+export type StripeMode = 'absent' | 'test' | 'live';
+
 export interface PublicConfig {
   /** True when accounts can be created (database + session secret present). */
   accounts: boolean;
   /** True when a real Stripe Checkout session can be created and verified. */
   payments: boolean;
-  /** True when Stripe is in test mode — the UI says so, out loud. */
+  /**
+   * True only when a real `sk_test_…` key is installed.
+   * Absent or malformed keys are NOT test mode — see `stripeMode`.
+   */
   testMode: boolean;
+  /**
+   * Distinguishes "no Stripe key", "test key", and "live key".
+   * Use this for operator readiness; use `testMode` for the customer-facing banner.
+   */
+  stripeMode: StripeMode;
   /** True when reminder emails can actually be delivered. */
   email: boolean;
   priceLabel: string;
@@ -130,11 +141,28 @@ export function paymentsEnabled(env: Env): boolean {
   );
 }
 
+/**
+ * Classify the Stripe secret key without treating "missing" as "test".
+ *
+ * Previously `testMode` was `!key.startsWith('sk_live_')`, so a deployment with
+ * no key at all reported testMode true — the same signal as a deliberate test
+ * install. Operators and the UI need to tell those apart.
+ */
+export function stripeModeOf(env: Env): StripeMode {
+  const key = env.STRIPE_SECRET_KEY?.trim() ?? '';
+  if (!key) return 'absent';
+  if (key.startsWith('sk_live_')) return 'live';
+  if (key.startsWith('sk_test_')) return 'test';
+  return 'absent';
+}
+
 export function publicConfig(env: Env): PublicConfig {
+  const mode = stripeModeOf(env);
   return {
     accounts: accountsEnabled(env),
     payments: paymentsEnabled(env),
-    testMode: !env.STRIPE_SECRET_KEY?.startsWith('sk_live_'),
+    testMode: mode === 'test',
+    stripeMode: mode,
     email: emailEnabled(env),
     priceLabel: env.PRICE_LABEL || '$19.99',
     supportEmail: env.SUPPORT_EMAIL || '',
@@ -171,7 +199,12 @@ export function configWarnings(env: Env): string[] {
       'STRIPE_PRICE_ID is not a Price id (expected "price_…", got a Product id?) — payments are off.',
     );
   }
-  if (!env.STRIPE_SECRET_KEY) warnings.push('STRIPE_SECRET_KEY is not set — payments are off.');
+  const mode = stripeModeOf(env);
+  if (mode === 'absent') {
+    warnings.push('STRIPE_SECRET_KEY is missing or not sk_test_/sk_live_ — Stripe is absent.');
+  } else if (mode === 'test') {
+    warnings.push('STRIPE_SECRET_KEY is a test key — real customers must not pay on this deployment.');
+  }
   if (!env.STRIPE_WEBHOOK_SECRET) {
     warnings.push('STRIPE_WEBHOOK_SECRET is not set — payments are off.');
   }
