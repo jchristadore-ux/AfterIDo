@@ -16,10 +16,15 @@
  * wire is the email address she types to create an account.
  */
 
+export type StripeMode = 'absent' | 'test' | 'live';
+
 export interface ServerConfig {
   accounts: boolean;
   payments: boolean;
+  /** True only when a real sk_test_ key is installed (see stripeMode). */
   testMode: boolean;
+  /** absent | test | live — readiness signal for operators and the UI. */
+  stripeMode: StripeMode;
   email: boolean;
   priceLabel: string;
   supportEmail: string;
@@ -35,7 +40,8 @@ export interface Account {
 export const OFFLINE_CONFIG: ServerConfig = {
   accounts: false,
   payments: false,
-  testMode: true,
+  testMode: false,
+  stripeMode: 'absent',
   email: false,
   priceLabel: '$19.99',
   supportEmail: '',
@@ -96,9 +102,29 @@ function safeParse(text: string): unknown {
   }
 }
 
+function normalizeConfig(raw: Partial<ServerConfig>): ServerConfig {
+  const stripeMode: StripeMode =
+    raw.stripeMode === 'test' || raw.stripeMode === 'live' || raw.stripeMode === 'absent'
+      ? raw.stripeMode
+      : raw.testMode
+        ? 'test'
+        : 'absent';
+  return {
+    accounts: Boolean(raw.accounts),
+    payments: Boolean(raw.payments),
+    /** Prefer stripeMode when present; never treat "absent" as test. */
+    testMode: stripeMode === 'test',
+    stripeMode,
+    email: Boolean(raw.email),
+    priceLabel: raw.priceLabel || '$19.99',
+    supportEmail: raw.supportEmail || '',
+  };
+}
+
 export async function loadConfig(): Promise<ServerConfig> {
   try {
-    return await request<ServerConfig>('/config');
+    const raw = await request<Partial<ServerConfig>>('/config');
+    return normalizeConfig(raw);
   } catch {
     return OFFLINE_CONFIG;
   }

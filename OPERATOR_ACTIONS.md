@@ -1,0 +1,106 @@
+# AfterIDo — operator actions
+
+Human steps that cannot live in application code. Do these in order. Never paste
+`sk_`, `whsec_`, or `re_` into chat, git, or screenshots.
+
+AfterIDo uses its **own** Stripe account — not FlipPulse, not FullSend.
+
+---
+
+## 0. Preconditions
+
+- [ ] Cloudflare Worker `afterido` is deployed from `main`
+- [ ] `GET https://after-i-do.com/api/config` returns `accounts: true`, `email: true`
+- [ ] Resend domain `after-i-do.com` is verified for **sending**
+- [ ] `hello@after-i-do.com` can **receive** mail (Resend verify ≠ inbox — use Cloudflare Email Routing or equivalent). Terms/Privacy publish this address for refunds.
+- [ ] You are logged into the **AfterIDo** Stripe Dashboard (confirm business name)
+
+---
+
+## 1. Stripe live mode — create or confirm live price + webhook
+
+Live and test are entirely separate in Stripe. A test `price_` with a live key fails at checkout.
+
+1. Open [dashboard.stripe.com](https://dashboard.stripe.com) → **Test mode OFF**
+2. Complete **Activate account** if prompted (payouts will not work until this is done)
+3. **Product catalogue** → confirm **AfterIDo Premium** · $19.99 USD · one-time  
+   - Copy the live `price_…` ID  
+   - If missing: Add product → name `AfterIDo Premium` → $19.99 → One-time → copy `price_`
+4. **Developers → API keys** → reveal **Secret key** (`sk_live_…`) — keep private
+5. **Developers → Webhooks → Add endpoint** (or open existing)  
+   - URL exactly: `https://after-i-do.com/api/stripe/webhook` (no trailing slash)  
+   - Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `charge.refunded`, `charge.dispute.closed`  
+   - Reveal **Signing secret** (`whsec_…`) — keep private
+
+---
+
+## 2. Rotate the three Cloudflare values **together**
+
+Order matters: install the live price in config **with** the live secrets so Checkout never pairs a live key with a test price (or the reverse).
+
+### 2a. `STRIPE_PRICE_ID` (public var)
+
+1. Cloudflare → **Workers & Pages** → **`afterido`** → **Settings** → **Variables and Secrets**
+2. Set `STRIPE_PRICE_ID` to the **live** `price_…` from step 1  
+   - Type may be Text (not secret)
+3. If the price is also in `wrangler.jsonc` `vars`, update that file on `main` and deploy so the next GitHub deploy does not overwrite the dashboard value with an old test/live mismatch
+
+### 2b. Secrets (type **Secret**, not Text)
+
+1. Same Variables screen
+2. Delete any **Text** rows named `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` if present
+3. **+ Add** → type **Secret** → `STRIPE_SECRET_KEY` → paste `sk_live_…` → Save
+4. **+ Add** → type **Secret** → `STRIPE_WEBHOOK_SECRET` → paste live `whsec_…` → Save
+5. Leave `SESSION_SECRET` and `RESEND_API_KEY` unchanged
+6. **Deploy** / **Save and deploy**
+
+### 2c. Verify
+
+1. Hard-refresh `https://after-i-do.com/api/config`  
+   - Expect: `payments: true`, `testMode: false`, `stripeMode: "live"`
+2. `/premium` must **not** show the site-wide test-mode banner
+3. Phone: real-card purchase → unlock → receipt → Stripe full refund → Premium **off** within ~1 minute
+
+---
+
+## 3. Automated smoke (test mode) before every go-live attempt
+
+With **test** keys still installed (or on a staging Worker):
+
+```bash
+export AFTERIDO_ORIGIN=https://after-i-do.com
+export STRIPE_SECRET_KEY=sk_test_…
+export STRIPE_WEBHOOK_SECRET=whsec_…   # test endpoint secret
+export VERIFY_USER_ID=…               # existing user uuid in D1
+export AFTERIDO_SESSION_COOKIE='session=…'  # required for full proof
+npm run verify:payments
+```
+
+**Rule:** if the script reports that refund did not remove Premium, **do not go live**.
+
+Exit codes: `0` full pass with revoke proof · `2` webhooks ok but cookie missing · `1` hard fail.
+
+---
+
+## 4. After live cutover — remaining launch hygiene
+
+- [ ] Unpublish GitHub Pages copy at `jchristadore-ux.github.io/AfterIDo/` if still live
+- [ ] Confirm `www.after-i-do.com` redirects to apex
+- [ ] UptimeRobot (or similar): homepage + `/api/config` keyword `"payments":true`
+- [ ] Stripe webhook → enable email on delivery failure
+- [ ] Confirm legal entity name / governing law in `src/config/site.ts` match reality
+
+---
+
+## 5. Related Worker secrets (reference)
+
+| Name | Type | Purpose |
+|------|------|---------|
+| `SESSION_SECRET` | Secret | ≥32 chars; cookie HMAC |
+| `RESEND_API_KEY` | Secret | Magic links + receipts |
+| `STRIPE_SECRET_KEY` | Secret | `sk_test_` or `sk_live_` |
+| `STRIPE_WEBHOOK_SECRET` | Secret | `whsec_` matching mode |
+| `STRIPE_PRICE_ID` | Text/var | `price_` matching mode |
+| `EMAIL_FROM` | Text/var | e.g. `AfterIDo <hello@after-i-do.com>` |
+| `PUBLIC_ORIGIN` | Text/var | `https://after-i-do.com` |
+| `SUPPORT_EMAIL` | Text/var | `hello@after-i-do.com` |
