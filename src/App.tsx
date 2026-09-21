@@ -21,6 +21,7 @@ import { SignIn } from '@/pages/SignIn';
 import { StateGuide } from '@/pages/StateGuide';
 import { Contact, DisclaimerPage, Privacy, Terms } from '@/pages/Legal';
 import { NotFound } from '@/pages/NotFound';
+import { TestModeBanner } from '@/components/TestModeBanner';
 
 /** Someone landing on /app without a profile gets the questions first. */
 function RequireProfile({ children }: { children: ReactElement }) {
@@ -46,6 +47,7 @@ export function App() {
   return (
     <AccountProvider>
       <AppProvider>
+        <TestModeBanner />
         <ScrollToTop />
         <Routes>
           {/* Public */}
