@@ -678,7 +678,7 @@ const PENNSYLVANIA: StateProfile = {
   coverage: 'detailed',
   lastReviewed: REVIEWED,
   sourceNote:
-    'Reviewed against PA marriage-records guidance (county Register of Wills / Clerk of Orphans’ Court), PennDOT name-change service pages, vote.pa.gov / PA voter update pages, and DOS Professional Licensing.',
+    'Reviewed against PA marriage-records guidance (county Register of Wills / Clerk of Orphans’ Court), PennDOT name-change service pages, PA Votes voter update pages (pa.gov), and DOS Professional Licensing.',
   tasks: {
     'marriage-certificate': {
       agencyName: 'County Register of Wills / Clerk of the Orphans’ Court',
@@ -741,11 +741,6 @@ const PENNSYLVANIA: StateProfile = {
           label: 'Update my Pennsylvania voter registration',
           url: 'https://www.pa.gov/agencies/vote/voter-registration/update-my-registration',
           source: 'Pennsylvania Votes',
-        },
-        {
-          label: 'VotesPA',
-          url: 'https://vote.pa.gov/',
-          source: 'Pennsylvania Department of State',
         },
       ],
     },

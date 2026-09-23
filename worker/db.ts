@@ -311,9 +311,74 @@ export async function markReminderSent(db: D1Database, id: string): Promise<void
  * asked for and silently never received. Counting the attempt instead means the
  * next hourly sweep picks it up again, and `dueReminders` stops trying once the
  * count says this one is not going to work.
+ *
+ * Returns the new `attempts` count so the sweep can decide whether this failure
+ * crossed the dead-letter threshold without a second round-trip race.
  */
-export async function markReminderFailed(db: D1Database, id: string): Promise<void> {
+export async function markReminderFailed(db: D1Database, id: string): Promise<number> {
   await db.prepare('UPDATE reminders SET attempts = attempts + 1 WHERE id = ?').bind(id).run();
+  const row = await db
+    .prepare('SELECT attempts FROM reminders WHERE id = ?')
+    .bind(id)
+    .first<{ attempts: number }>();
+  return row?.attempts ?? MAX_REMINDER_ATTEMPTS;
+}
+
+export interface EmailDeadLetterRow {
+  reminder_id: string;
+  user_id: string;
+  subject: string;
+  last_error: string | null;
+  attempts: number;
+  created_at: number;
+}
+
+/**
+ * Records a dead-lettered reminder exactly once.
+ *
+ * Primary key is the reminder id, so a re-sweep that somehow still sees the
+ * row cannot insert a second alert row. Returns true only when this call
+ * created the row — that is the gate for sending the operator alert.
+ */
+export async function recordEmailDeadLetter(
+  db: D1Database,
+  args: {
+    reminderId: string;
+    userId: string;
+    subject: string;
+    lastError: string | null;
+    attempts: number;
+  },
+): Promise<boolean> {
+  const result = await db
+    .prepare(
+      `INSERT OR IGNORE INTO email_dead_letters
+        (reminder_id, user_id, subject, last_error, attempts, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      args.reminderId,
+      args.userId,
+      args.subject.slice(0, 200),
+      args.lastError ? args.lastError.slice(0, 500) : null,
+      args.attempts,
+      nowSeconds(),
+    )
+    .run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
+export async function listEmailDeadLetters(
+  db: D1Database,
+  limit = 50,
+): Promise<EmailDeadLetterRow[]> {
+  const result = await db
+    .prepare(
+      'SELECT * FROM email_dead_letters ORDER BY created_at DESC LIMIT ?',
+    )
+    .bind(limit)
+    .all<EmailDeadLetterRow>();
+  return result.results ?? [];
 }
 
 // ---------------------------------------------------------------------------
