@@ -14,7 +14,7 @@
  * injects a real `<main id="seo-landing">` into `#root` so non-JS crawlers see
  * verified steps and official .gov links instead of an empty SPA shell.
  *
- * Hydration approach: the landing HTML is prepended inside `#root`. React's
+ * Hydration approach: the landing HTML is injected into `#root` via setInnerContent. React's
  * `createRoot(#root).render(...)` replaces those children on mount, so the SPA
  * is unchanged for real browsers while crawlers that never run JS still get
  * the static content. Do not invent a second URL for these landings.
@@ -102,8 +102,10 @@ export function withPageMeta(response: Response, url: URL, origin: string): Resp
   if (landingHtml) {
     rewriter = rewriter.on('#root', {
       element(el) {
-        // Prepend so crawlers see content; React createRoot replaces #root kids.
-        el.prepend(landingHtml, { html: true });
+        // setInnerContent is reliable on an empty #root; prepend can be a
+        // no-op for some empty elements under HTMLRewriter. React createRoot
+        // still replaces these children on mount.
+        el.setInnerContent(landingHtml, { html: true });
       },
     });
   }
