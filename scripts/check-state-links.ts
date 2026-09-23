@@ -14,7 +14,7 @@ import { join, relative } from 'node:path';
 const ROOT = new URL('..', import.meta.url).pathname;
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
-const TIMEOUT_MS = 15_000;
+const TIMEOUT_MS = 30_000;
 
 const SCAN_PATHS = ['src/data/states.ts'];
 
@@ -56,7 +56,7 @@ type Result =
   | { url: string; ok: true; status: number; finalUrl: string; warn?: string }
   | { url: string; ok: false; status?: number; error: string };
 
-async function checkUrl(url: string): Promise<Result> {
+async function checkUrlOnce(url: string): Promise<Result> {
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), TIMEOUT_MS);
   try {
@@ -98,6 +98,22 @@ async function checkUrl(url: string): Promise<Result> {
   }
 }
 
+async function checkUrl(url: string): Promise<Result> {
+  const attempts = 3;
+  let last: Result | undefined;
+  for (let i = 0; i < attempts; i++) {
+    last = await checkUrlOnce(url);
+    if (last.ok) return last;
+    // Retry timeouts / transient aborts only — not hard 404/5xx.
+    const transient =
+      !last.status &&
+      /abort|timeout|network|ECONN|ENOTFOUND|UND_ERR/i.test(last.error);
+    if (!transient || i === attempts - 1) return last;
+    await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+  }
+  return last!;
+}
+
 async function main(): Promise<void> {
   const files = collectFiles();
   const urls = new Set<string>();
@@ -113,7 +129,7 @@ async function main(): Promise<void> {
   console.log('');
 
   const results: Result[] = [];
-  const concurrency = 6;
+  const concurrency = 4;
   let index = 0;
   async function worker() {
     while (index < list.length) {
