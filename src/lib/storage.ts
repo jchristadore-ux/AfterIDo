@@ -4,15 +4,10 @@ import type { AppState, Profile } from '@/types';
  * Persistence.
  *
  * ── Where this build stores data ──────────────────────────────────────────
- * Everything lives in this browser, in localStorage, under one key. There is
- * no server in this MVP, so nothing she types is transmitted anywhere. That is
- * a deliberate privacy posture for a demo, not a production design.
- *
- * ── What production needs instead ─────────────────────────────────────────
- * A real deployment replaces `loadState`/`saveState` with an authenticated API
- * client and keeps this profile server-side, encrypted at rest, scoped to her
- * account. The shape of the state does not change — only the transport. See
- * `PersistenceAdapter` below for the seam.
+ * Guests and demos: localStorage under one key (this adapter). Signed-in
+ * accounts: AppContext also syncs the same AppState shape to `/api/plan` (D1),
+ * with localStorage as an offline cache. File *bytes* are never in plan JSON —
+ * see documentStorage.ts / R2.
  *
  * ── What we never store, anywhere ─────────────────────────────────────────
  * Social Security numbers, driver's license numbers, account numbers and
@@ -57,7 +52,11 @@ export interface PersistenceAdapter {
   clear(): void;
 }
 
-/** The adapter used in this build. Swap for an API client in production. */
+/**
+ * Local cache. When the user is signed in, AppContext layers `/api/plan` on
+ * top — server is source of truth online; this adapter still absorbs every
+ * keystroke so a reload mid-flight does not lose work.
+ */
 export const localAdapter: PersistenceAdapter = {
   load() {
     try {
@@ -171,4 +170,13 @@ export function saveState(state: AppState): void {
 
 export function clearState(): void {
   localAdapter.clear();
+}
+
+/** Plan JSON for the server: metadata only, never file-availability flags. */
+export function stripForSync(state: AppState): AppState {
+  return {
+    ...state,
+    demoMode: false,
+    documents: state.documents.map((d) => ({ ...d, availableInSession: false })),
+  };
 }

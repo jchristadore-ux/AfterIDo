@@ -14,7 +14,7 @@ export function landingFaqForConfig(config: ServerConfig): FaqItem[] {
     if (item.q === 'Is my personal information safe?' && !config.accounts) {
       return {
         ...item,
-        a: 'Your name, address, date of birth and marriage details are stored in your own browser and are never sent to us. AfterIDo never asks for your Social Security number, driver’s licence number, bank account numbers or passwords — they are not in the app at all. Accounts are not offered on this deployment, so there is nothing of yours on our server.',
+        a: 'Your name, address, date of birth and marriage details stay in your own browser on this deployment. AfterIDo never asks for your Social Security number, driver’s licence number, bank account numbers or passwords — they are not in the app at all. Accounts are not offered here, so there is nothing of yours on our server.',
       };
     }
     return item;
@@ -32,6 +32,6 @@ export function landingOffersJsonLd(payments: boolean) {
 
 export function trustAccountSentence(accounts: boolean): string {
   return accounts
-    ? ' If you make an account, the only thing on our side is your email address and whether you bought Premium.'
+    ? ' If you make an account, your checklist and profile sync to our servers so they restore on a new device; we still never ask for SSN, licence numbers, account numbers or passwords.'
     : ' Accounts are not offered on this deployment, so there is nothing of yours on our server.';
 }

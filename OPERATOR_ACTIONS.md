@@ -119,3 +119,55 @@ If the job fails:
    `.gov` URL; do not substitute affiliate or SEO farm pages).
 3. Update `src/data/states.ts`, re-run `npm run check:state-links` locally, and
    ship a PR. Keep `lastReviewed` / `sourceNote` honest when you change guidance.
+
+---
+
+## 7. R2 document vault (`after-i-do-documents`)
+
+The Worker expects an R2 binding named `DOCUMENTS` (see `wrangler.jsonc`). The
+bucket may not exist yet — create it once, then redeploy so `/api/config`
+reports `documents: true`.
+
+### 7a. Create the bucket
+
+1. Cloudflare dashboard → **R2 Object Storage** → **Create bucket**
+2. Name exactly: `after-i-do-documents` (must match `wrangler.jsonc`)
+3. Leave default encryption (SSE) on — AfterIDo relies on R2 server-side
+   encryption at rest; there is no second app-level key today
+4. Or CLI (when wrangler is logged in as the AfterIDo account):
+
+   ```bash
+   wrangler r2 bucket create after-i-do-documents
+   ```
+
+### 7b. Bind + migrate + deploy
+
+1. Confirm `wrangler.jsonc` contains:
+
+   ```jsonc
+   "r2_buckets": [{ "binding": "DOCUMENTS", "bucket_name": "after-i-do-documents" }]
+   ```
+
+2. Apply D1 migrations (includes `0003_plan_sync_and_docs.sql`):
+
+   ```bash
+   npm run db:migrate
+   ```
+
+3. Deploy the Worker from `main` (`npm run deploy` or the usual GitHub path)
+
+### 7c. Verify
+
+1. Hard-refresh `https://after-i-do.com/api/config`  
+   - Expect: `accounts: true`, **`documents: true`**
+2. Sign in with a Premium account → **My documents** → upload a small PDF/JPG  
+   - Expect success (not “document storage is not enabled”)
+3. Reload / open on another device while signed in → file still opens from vault
+4. Delete the file / delete the account → object gone from the bucket (prefix
+   `{userId}/`)
+
+### 7d. Follow-ups (not required for this cut)
+
+- [ ] Optional `document_access_log` table for every GET/PUT/DELETE
+- [ ] Optional app-level encryption with a key derived from `SESSION_SECRET`
+- [ ] Lifecycle / abort multipart rules if you later switch to direct-to-R2 signed URLs

@@ -27,7 +27,7 @@ export const SITE = {
   governingLaw: 'the State of New Jersey, United States',
 
   /** Shown on the legal pages so a reader can see how current they are. */
-  legalLastUpdated: 'August 24, 2026',
+  legalLastUpdated: 'September 23, 2026',
 
   /** Days within which a Premium purchase can be refunded, no questions asked. */
   refundWindowDays: 30,

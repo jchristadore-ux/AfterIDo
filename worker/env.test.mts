@@ -26,6 +26,7 @@ check('publicConfig testMode true for sk_test_', pubTest.testMode === true && pu
 
 const pubAbsent = publicConfig(envWithKey(undefined));
 check('publicConfig absent is not testMode', pubAbsent.testMode === false && pubAbsent.stripeMode === 'absent');
+check('publicConfig documents false by default', pubAbsent.documents === false);
 
 const pubLive = publicConfig(envWithKey('sk_live_abc'));
 check('publicConfig live is not testMode', pubLive.testMode === false && pubLive.stripeMode === 'live');

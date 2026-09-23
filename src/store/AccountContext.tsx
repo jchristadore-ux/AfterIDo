@@ -15,9 +15,9 @@ import { OFFLINE_CONFIG, type Account, type ServerConfig } from '@/lib/api';
  *
  * ── Why this is separate from AppContext ──────────────────────────────────
  * AppContext holds the user's plan for changing her name: her details, her
- * tasks, her progress. All of that lives in her browser and never leaves it.
- * This holds the two facts that cannot live in a browser and be believed —
- * her identity and her entitlement — and both come from the server.
+ * tasks, her progress. Guests keep that in the browser; signed-in accounts
+ * also sync it via `/api/plan`. This context holds identity and entitlement
+ * from the server — never set locally.
  *
  * ── The rule ──────────────────────────────────────────────────────────────
  * `plan` here is only ever assigned from a server response. There is no

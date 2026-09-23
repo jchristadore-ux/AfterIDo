@@ -10,7 +10,7 @@ export function Privacy() {
     <MarketingShell
       eyebrow="Legal"
       title="Privacy Policy"
-      intro="The short version: your name-change details stay in your browser, we never ask for the numbers that matter most, and the only thing we keep is an email address and whether you bought Premium."
+      intro="The short version: we never ask for the numbers that matter most; guests keep the plan in the browser; signed-in accounts sync the plan to us so it restores on a new device; Premium vault files go to Cloudflare R2 scoped to your account; card data stays on Stripe."
     >
       <Seo title={PAGE_META['/privacy'].title} description={PAGE_META['/privacy'].description} />
 
@@ -33,27 +33,20 @@ export function Privacy() {
 
         <Section heading="Information stored on your device">
           <p>
-            Everything you enter to build your plan — your current and new name, date of birth,
-            address, phone number, email address, marriage date and place, spouse’s name, which
-            circumstances apply to you, your progress on each task, your notes, and any reminders
-            you set — is stored in your own browser using local storage.
+            Whether or not you have an account, the app keeps a local copy of your plan in your
+            browser using local storage: your current and new name, date of birth, address, phone
+            number, email address, marriage date and place, spouse’s name, circumstances, progress
+            on each task, notes, custom tasks, and document metadata (file name, size, kind — not
+            necessarily the file bytes).
           </p>
           <p>
-            <strong className="font-medium text-charcoal-900">
-              This information is not transmitted to us and we cannot see it.
-            </strong>{' '}
-            It stays on the device you typed it on. Clearing your browser data deletes it, and we
-            have no copy to restore.
-          </p>
-          <p>
-            Files you add to your document vault are held in your browser’s memory for that tab
-            only. They are never uploaded and never written to disk by us. Reloading the page drops
-            the file contents; only the file name and what it is for remain in your plan.
+            That local copy is a cache and offline fallback. Clearing site data or using “Start
+            over” in your profile removes it from the device.
           </p>
         </Section>
 
-        <Section heading="Information we do collect">
-          <p>If you create an account, we store on our server:</p>
+        <Section heading="Information we store when you create an account">
+          <p>If you create an account, we store on our servers (Cloudflare D1 and, for files, R2):</p>
           <ul className="list-disc space-y-1.5 pl-5">
             <li>Your email address, so we can send a sign-in link and a receipt.</li>
             <li>Whether you have bought Premium, and the date.</li>
@@ -62,10 +55,20 @@ export function Privacy() {
               If you turn on email reminders: the date each reminder should send and the short text
               you chose to be reminded about.
             </li>
+            <li>
+              Your synced plan JSON — the same checklist and profile fields listed above — so
+              Premium and progress restore when you sign in on a new device.
+            </li>
+            <li>
+              If you use the Premium document vault and storage is enabled on the deployment:
+              uploaded file bytes in Cloudflare R2 under a key scoped to your account, plus
+              metadata (file name, content type, size, kind) in D1. R2 encrypts objects at rest by
+              default.
+            </li>
           </ul>
           <p>
-            That is the complete list. There is no field on our server for your name, address, date
-            of birth or marriage details.
+            Without an account, plan details and vault uploads are not sent to us (uploads stay in
+            the browser tab only).
           </p>
         </Section>
 
@@ -115,21 +118,23 @@ export function Privacy() {
           <p>
             We do not sell your information, and we do not share it for advertising. The only third
             parties involved are the ones needed to run the service: Stripe for payments, our email
-            provider for sign-in links and receipts, and Cloudflare for hosting. We may disclose
-            information if required by law.
+            provider for sign-in links and receipts, and Cloudflare for hosting, database, and
+            object storage. We may disclose information if required by law.
           </p>
         </Section>
 
         <Section heading="Keeping and deleting your information">
           <p>
             Your account is kept until you delete it. You can delete it yourself from your profile
-            in the app, which removes your email address, your reminders and your sign-in tokens
-            immediately. Payment records are retained without your email address attached, because
-            records of financial transactions have their own retention obligations.
+            in the app, which removes your email address, your reminders, your sign-in tokens, your
+            synced plan, and your vault files and metadata. Payment records are retained without
+            your email address attached, because records of financial transactions have their own
+            retention obligations.
           </p>
           <p>
-            To delete the information stored in your browser, use “Start over” in your profile, or
-            clear site data in your browser.
+            To delete only the information stored in your browser, use “Start over” in your
+            profile, or clear site data in your browser. That does not by itself delete the
+            server-side plan while the account still exists.
           </p>
           <p>
             You can also ask us to delete your information by writing to <SupportAddress />.
