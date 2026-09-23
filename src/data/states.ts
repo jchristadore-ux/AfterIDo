@@ -96,7 +96,7 @@ const VERIFIED_MV_AGENCY: Partial<Record<StateCode, { name: string; url: string 
   FL: { name: 'Florida Highway Safety and Motor Vehicles', url: 'https://www.flhsmv.gov/' },
   GA: { name: 'Georgia Department of Driver Services', url: 'https://dds.georgia.gov/' },
   PA: { name: 'PennDOT Driver and Vehicle Services', url: 'https://www.dmv.pa.gov/' },
-  TX: { name: 'Texas Department of Public Safety', url: 'https://www.dps.texas.gov/' },
+  TX: { name: 'Texas Department of Public Safety', url: 'https://www.texas.gov/driver-services/index.html' },
   WA: { name: 'Washington Department of Licensing', url: 'https://dol.wa.gov/' },
 };
 
@@ -353,7 +353,7 @@ const TEXAS: StateProfile = {
   coverage: 'detailed',
   lastReviewed: REVIEWED,
   sourceNote:
-    'Reviewed against Texas DSHS marriage/divorce records, Texas DPS driver license name-change guidance, VoteTexas.gov, TDLR, and TxDMV motorist pages.',
+    'Reviewed against Texas DSHS marriage/divorce records, Texas.gov driver services (DPS), VoteTexas.gov, Texas Governor TDLR org page, and TxDMV motorist pages.',
   tasks: {
     'marriage-certificate': {
       agencyName: 'County Clerk (certified license) / Texas DSHS (verification letter)',
@@ -393,9 +393,11 @@ const TEXAS: StateProfile = {
       ],
       links: [
         {
-          label: 'Texas DPS — change information on your driver license or ID',
-          url: 'https://www.dps.texas.gov/section/driver-license/how-change-information-your-driver-license-or-id-card',
-          source: 'Texas Department of Public Safety',
+          // dps.texas.gov times out / rejects Actions runners (WAF); texas.gov
+          // driver-services is the official portal that routes to DPS guidance.
+          label: 'Texas.gov — driver services (DPS name / address changes)',
+          url: 'https://www.texas.gov/driver-services/index.html',
+          source: 'Texas.gov / Texas Department of Public Safety',
         },
       ],
     },
@@ -426,9 +428,11 @@ const TEXAS: StateProfile = {
       ],
       links: [
         {
+          // www.tdlr.texas.gov/ often CONNECT_TIMEOUT from GitHub Actions;
+          // the Governor's org page is the official TDLR entry that stays reachable.
           label: 'Texas Department of Licensing and Regulation',
-          url: 'https://www.tdlr.texas.gov/',
-          source: 'Texas Department of Licensing and Regulation',
+          url: 'https://gov.texas.gov/organization/tdlr',
+          source: 'Office of the Texas Governor — TDLR',
         },
       ],
     },
@@ -1483,7 +1487,8 @@ export const DETAILED_STATES: StateCode[] = Object.values(STATE_GUIDANCE)
  *
  * Derived from the state names rather than hand-written, so a slug can never
  * drift from the state it names. `stateSlug` lives in shared/ because the
- * Worker needs it too, for the sitemap and for link previews.
+ * Worker needs it too for link previews. The sitemap only lists detailed
+ * states — see `shared/stateLandings.ts`.
  */
 export const STATE_SLUG: Record<StateCode, string> = Object.fromEntries(
   US_STATES.map((s) => [s.code, stateSlug(s.name)]),

@@ -239,3 +239,21 @@ After merging this workstream, apply migration `0004_email_dead_letter.sql`:
 npm run db:migrate
 ```
 
+---
+
+## 9. SEO — detailed states only (WS5)
+
+Sitemap and Worker SSR advertise **only** states with `coverage: 'detailed'` in
+`src/data/states.ts`, via the Worker-safe payloads in `shared/stateLandings.ts`.
+
+To add a state to search:
+
+1. Research and promote it to `detailed` in `src/data/states.ts` (verified
+   agency steps + official .gov links only).
+2. Refresh the matching entry in `shared/stateLandings.ts` (or regenerate from
+   the detailed profile). Basic pages stay reachable and `noindex` until then.
+3. Merge; the next Worker deploy picks up sitemap + SSR automatically. No
+   Search Console re-submit is required for a new URL, but submitting
+   `https://after-i-do.com/sitemap.xml` after a batch of new states helps.
+
+Do **not** list basic/thin state URLs in the sitemap.
