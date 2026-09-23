@@ -795,7 +795,7 @@ const ILLINOIS: StateProfile = {
   coverage: 'detailed',
   lastReviewed: REVIEWED,
   sourceNote:
-    'Reviewed against Illinois DPH marriage-records guidance (county clerk), Illinois Secretary of State driver services pages, Illinois State Board of Elections, and IDFPR.',
+    'Reviewed against Illinois DPH marriage-records guidance (county clerk), Illinois.gov Secretary of State agency page, Illinois State Board of Elections, and IDFPR. Vehicle title/registration left to the generic catalog until a durable official SOS vehicle URL is confirmed.',
   tasks: {
     'marriage-certificate': {
       agencyName: 'County Clerk (certified copy) / Illinois DPH (verification only)',
@@ -833,12 +833,7 @@ const ILLINOIS: StateProfile = {
       ],
       links: [
         {
-          label: 'Illinois Secretary of State — driver license and ID information',
-          url: 'https://www.ilsos.gov/departments/drivers/drivers-license/drlicid.html',
-          source: 'Illinois Secretary of State',
-        },
-        {
-          label: 'Illinois Secretary of State (agency overview)',
+          label: 'Illinois Secretary of State (official agency page)',
           url: 'https://www.illinois.gov/agencies/agency.sos.html',
           source: 'Illinois.gov',
         },
@@ -876,22 +871,6 @@ const ILLINOIS: StateProfile = {
           label: 'Illinois Department of Financial and Professional Regulation',
           url: 'https://idfpr.illinois.gov/',
           source: 'IDFPR',
-        },
-      ],
-    },
-    'vehicle-title-registration': {
-      agencyName: 'Illinois Secretary of State — Vehicle Services',
-      headline: 'Update vehicle title and registration through Illinois Secretary of State Vehicle Services.',
-      steps: [
-        'Review Vehicle Services guidance after your driver credential name is updated.',
-        'Bring title/registration information, or contact your lienholder if they hold the title.',
-        'You complete the Secretary of State process yourself.',
-      ],
-      links: [
-        {
-          label: 'Illinois Secretary of State — vehicles',
-          url: 'https://www.ilsos.gov/departments/vehicles.html',
-          source: 'Illinois Secretary of State',
         },
       ],
     },
