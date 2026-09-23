@@ -72,6 +72,9 @@ export function StateGuide() {
             The steps below were checked against official {name} agency pages on{' '}
             {formatDate(profile.lastReviewed)}. Requirements do change — the official links are
             always the final word.
+            {profile.sourceNote ? (
+              <span className="mt-2 block text-sm opacity-90">{profile.sourceNote}</span>
+            ) : null}
           </Callout>
         ) : (
           <Callout tone="champagne" title={`We haven't verified ${name}'s local specifics yet`}>

@@ -1,0 +1,32 @@
+name: State guidance link check
+
+# Weekly health check for official .gov (and primary agency) URLs embedded in
+# src/data/states.ts. Catches drift when an agency moves a page without us
+# noticing. The same script also runs as the `state-links` job in ci.yml on
+# every PR/push.
+
+on:
+  schedule:
+    # Mondays at 13:00 UTC (09:00 America/New_York during EDT).
+    - cron: '0 13 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: state-links-weekly
+  cancel-in-progress: true
+
+jobs:
+  state-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Check official state guidance links
+        run: npm run check:state-links

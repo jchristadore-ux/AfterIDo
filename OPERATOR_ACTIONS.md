@@ -104,3 +104,18 @@ Exit codes: `0` full pass with revoke proof · `2` webhooks ok but cookie missin
 | `EMAIL_FROM` | Text/var | e.g. `AfterIDo <hello@after-i-do.com>` |
 | `PUBLIC_ORIGIN` | Text/var | `https://after-i-do.com` |
 | `SUPPORT_EMAIL` | Text/var | `hello@after-i-do.com` |
+
+---
+
+## 6. Weekly state guidance link checks
+
+GitHub Actions runs `npm run check:state-links` every Monday (workflow
+`state-links.yml`) and on every CI run (`state-links` job in `ci.yml`).
+
+If the job fails:
+
+1. Open the log — it lists each broken URL and status.
+2. Confirm the agency moved or retired the page (prefer the current official
+   `.gov` URL; do not substitute affiliate or SEO farm pages).
+3. Update `src/data/states.ts`, re-run `npm run check:state-links` locally, and
+   ship a PR. Keep `lastReviewed` / `sourceNote` honest when you change guidance.

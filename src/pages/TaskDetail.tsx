@@ -265,6 +265,9 @@ export function TaskDetail() {
                 {stateProfile.coverage === 'detailed'
                   ? `Checked against ${stateProfile.name} official sources on ${stateProfile.lastReviewed}. Requirements change — confirm on the agency page before you go.`
                   : `We haven’t verified ${stateProfile.name}-specific details yet. Everything above is a starting point, not a requirement list — the official page is authoritative.`}
+                {stateProfile.coverage === 'detailed' && stateProfile.sourceNote
+                  ? ` ${stateProfile.sourceNote}`
+                  : null}
               </p>
             </Card>
           </PremiumGate>
