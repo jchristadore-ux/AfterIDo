@@ -381,3 +381,141 @@ export async function purgeOldEvents(db: D1Database): Promise<void> {
     .bind(nowSeconds() - 400 * 86400)
     .run();
 }
+
+// ---------------------------------------------------------------------------
+// Plan sync (checklist / profile JSON — no file bytes)
+// ---------------------------------------------------------------------------
+
+export interface UserPlanRow {
+  user_id: string;
+  state_json: string;
+  revision: number;
+  updated_at: number;
+}
+
+export async function getUserPlan(db: D1Database, userId: string): Promise<UserPlanRow | null> {
+  return db
+    .prepare('SELECT user_id, state_json, revision, updated_at FROM user_plans WHERE user_id = ?')
+    .bind(userId)
+    .first<UserPlanRow>();
+}
+
+/**
+ * Upserts the plan. When `expectedRevision` is provided, the write is rejected
+ * (returns null) if the row's revision no longer matches — optimistic concurrency
+ * so two devices do not silently overwrite each other without the client noticing.
+ */
+export async function putUserPlan(
+  db: D1Database,
+  userId: string,
+  stateJson: string,
+  expectedRevision: number | null,
+): Promise<UserPlanRow | null> {
+  const now = nowSeconds();
+  const existing = await getUserPlan(db, userId);
+
+  if (!existing) {
+    if (expectedRevision !== null && expectedRevision !== 0) return null;
+    await db
+      .prepare(
+        'INSERT INTO user_plans (user_id, state_json, revision, updated_at) VALUES (?, ?, 1, ?)',
+      )
+      .bind(userId, stateJson, now)
+      .run();
+    return getUserPlan(db, userId);
+  }
+
+  if (expectedRevision !== null && existing.revision !== expectedRevision) {
+    return null;
+  }
+
+  const nextRevision = existing.revision + 1;
+  await db
+    .prepare(
+      'UPDATE user_plans SET state_json = ?, revision = ?, updated_at = ? WHERE user_id = ? AND revision = ?',
+    )
+    .bind(stateJson, nextRevision, now, userId, existing.revision)
+    .run();
+
+  const after = await getUserPlan(db, userId);
+  if (!after || after.revision !== nextRevision) return null;
+  return after;
+}
+
+export async function deleteUserPlan(db: D1Database, userId: string): Promise<void> {
+  await db.prepare('DELETE FROM user_plans WHERE user_id = ?').bind(userId).run();
+}
+
+// ---------------------------------------------------------------------------
+// Document vault metadata (bytes live in R2 under r2_key)
+// ---------------------------------------------------------------------------
+
+export interface UserDocumentRow {
+  id: string;
+  user_id: string;
+  r2_key: string;
+  file_name: string;
+  content_type: string;
+  byte_size: number;
+  kind_id: string;
+  created_at: number;
+}
+
+export async function insertUserDocument(
+  db: D1Database,
+  row: Omit<UserDocumentRow, 'created_at'> & { created_at?: number },
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO user_documents
+        (id, user_id, r2_key, file_name, content_type, byte_size, kind_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      row.id,
+      row.user_id,
+      row.r2_key,
+      row.file_name,
+      row.content_type,
+      row.byte_size,
+      row.kind_id,
+      row.created_at ?? nowSeconds(),
+    )
+    .run();
+}
+
+export async function findUserDocument(
+  db: D1Database,
+  userId: string,
+  docId: string,
+): Promise<UserDocumentRow | null> {
+  return db
+    .prepare('SELECT * FROM user_documents WHERE id = ? AND user_id = ?')
+    .bind(docId, userId)
+    .first<UserDocumentRow>();
+}
+
+export async function listUserDocuments(db: D1Database, userId: string): Promise<UserDocumentRow[]> {
+  const result = await db
+    .prepare('SELECT * FROM user_documents WHERE user_id = ? ORDER BY created_at DESC')
+    .bind(userId)
+    .all<UserDocumentRow>();
+  return result.results ?? [];
+}
+
+export async function deleteUserDocument(
+  db: D1Database,
+  userId: string,
+  docId: string,
+): Promise<UserDocumentRow | null> {
+  const row = await findUserDocument(db, userId, docId);
+  if (!row) return null;
+  await db.prepare('DELETE FROM user_documents WHERE id = ? AND user_id = ?').bind(docId, userId).run();
+  return row;
+}
+
+export async function deleteAllUserDocuments(db: D1Database, userId: string): Promise<UserDocumentRow[]> {
+  const rows = await listUserDocuments(db, userId);
+  await db.prepare('DELETE FROM user_documents WHERE user_id = ?').bind(userId).run();
+  return rows;
+}

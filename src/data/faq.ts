@@ -35,7 +35,7 @@ export const LANDING_FAQ: FaqItem[] = [
   },
   {
     q: 'Is my personal information safe?',
-    a: 'Your name, address, date of birth and marriage details are stored in your own browser and are never sent to us. AfterIDo never asks for your Social Security number, driver’s licence number, bank account numbers or passwords — they are not in the app at all. If you create an account, the only thing kept on our side is your email address and whether you bought Premium.',
+    a: 'AfterIDo never asks for your Social Security number, driver’s licence number, bank account numbers or passwords — they are not in the app at all. As a guest, your plan stays in your browser. If you create an account, your checklist and profile sync to our servers so they restore on a new device; Premium vault files go to Cloudflare R2 scoped to your account. Card payments stay on Stripe.',
   },
 ];
 
@@ -50,7 +50,7 @@ export const PRICING_FAQ: FaqItem[] = [
   },
   {
     q: 'What happens if I get a new phone?',
-    a: 'Sign in with the same email address and your Premium features come with you. Your checklist progress lives in each browser, so finishing on the device you started on is smoothest.',
+    a: 'Sign in with the same email address and your Premium features, checklist progress, and (when the vault is enabled) uploaded documents come with you. Guests without an account still keep progress only in that browser.',
   },
   {
     q: 'Can I get a refund?',

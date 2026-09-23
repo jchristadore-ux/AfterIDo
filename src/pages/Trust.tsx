@@ -11,16 +11,17 @@ export function Trust() {
     <MarketingShell
       eyebrow="Privacy & trust"
       title="What we ask for, what we don’t, and where it goes."
-      intro="A name change touches the most sensitive records you have. Here is exactly how AfterIDo treats them — including the parts that aren’t finished yet."
+      intro="A name change touches the most sensitive records you have. Here is exactly how AfterIDo treats them — including what syncs when you create an account."
     >
       <Seo title={PAGE_META['/trust'].title} description={PAGE_META['/trust'].description} />
 
       <div className="space-y-10">
         <Callout tone="primary" icon={<ShieldCheck size={16} />} title="The short version">
-          We never ask for your Social Security number, driver’s license number, or any account
-          number. Everything you type to build your plan stays in your browser and is never sent
-          to us. Files you add to the vault stay in the browser tab and are never written to disk.
-          The only thing on our server is your email address and whether you bought Premium.
+          We never ask for your Social Security number, driver’s license number, account numbers, or
+          passwords. Card payments stay on Stripe. Without an account, your checklist stays in this
+          browser. When you create an account, your checklist and profile sync to our database so
+          Premium and progress restore on a new device; Premium vault files go to Cloudflare R2
+          scoped to your account — not only this tab.
         </Callout>
 
         <section>
@@ -52,13 +53,14 @@ export function Trust() {
           </p>
           <Card className="mt-5 p-5">
             <p className="flex items-center gap-2 font-medium text-charcoal-900">
-              <Database size={16} className="text-primary-600" /> Where it lives in this build
+              <Database size={16} className="text-primary-600" /> Where it lives
             </p>
             <p className="mt-2 text-sm leading-relaxed text-charcoal-700">
-              In your browser’s local storage, on this device only. Nothing on that list is sent to
-              us and there is no field for it on our server. Clearing it from the profile page
-              removes it completely — nothing is retained elsewhere because nothing was sent
-              anywhere.
+              As a guest, everything you type stays in this browser’s local storage on this device.
+              After you create an account, the same checklist and profile sync to Cloudflare D1 so
+              signing in on a new phone restores your progress — not only your Premium entitlement.
+              Clearing “Start over” in the profile removes the local copy; deleting the account
+              removes the server copy.
             </p>
           </Card>
 
@@ -67,14 +69,15 @@ export function Trust() {
               <KeyRound size={16} className="text-primary-600" /> What is on our server
             </p>
             <p className="mt-2 text-sm leading-relaxed text-charcoal-700">
-              Only what has to be, and only if you create an account: your email address, so we can
-              send a sign-in link and a receipt; whether you have Premium and when you bought it; a
-              Stripe identifier so a refund can be matched to you; and, if you turn reminders on,
-              the dates and short titles of the reminders you set. That is the whole list.
+              If you create an account: your email address; whether you have Premium and when you
+              bought it; a Stripe identifier so a refund can be matched; reminder dates and short
+              titles if you turn reminders on; your synced plan JSON (names, address, marriage
+              details, task progress — not file bytes); and metadata for vault files (name, size,
+              type). That is the list.
             </p>
             <p className="mt-3 text-sm leading-relaxed text-charcoal-700">
-              Card details never reach AfterIDo at all — payment happens on Stripe’s own hosted
-              page. The session cookie is HttpOnly and SameSite, so no script can read it.
+              Card details never reach AfterIDo — payment happens on Stripe’s hosted page. The
+              session cookie is HttpOnly and SameSite, so no script can read it.
             </p>
           </Card>
         </section>
@@ -99,14 +102,15 @@ export function Trust() {
           <h2 className="text-2xl text-charcoal-900">Documents you upload</h2>
           <Card className="mt-4 p-5">
             <p className="flex items-center gap-2 font-medium text-charcoal-900">
-              <FileWarning size={16} className="text-champagne-500" /> Deliberately temporary
+              <FileWarning size={16} className="text-champagne-500" /> Account vault (Premium)
             </p>
             <p className="mt-2 text-sm leading-relaxed text-charcoal-700">
-              A marriage certificate plus a passport scan plus a Social Security card is
-              everything an identity thief needs. A browser can’t give those files the protection
-              they deserve, so this build doesn’t pretend it can: uploaded files stay in memory
-              for the tab and vanish on reload. What persists is the metadata — file name, size,
-              and which tasks it’s for — so your checklist still knows you have it.
+              When document storage is enabled and you are signed in with Premium, vault files are
+              uploaded through our Worker into a Cloudflare R2 bucket under a key scoped to your
+              account. R2 encrypts objects at rest by default. We do not add a second app-level
+              encryption layer today. Only your session can download them; deleting a file or your
+              account removes the object. Guests, demos, and deployments without the R2 binding
+              still keep uploads in the tab only.
             </p>
           </Card>
         </section>
@@ -114,14 +118,14 @@ export function Trust() {
         <section>
           <h2 className="text-2xl text-charcoal-900">What we haven’t built</h2>
           <p className="mt-2 leading-relaxed text-charcoal-700">
-            Being specific about what is missing matters more than sounding secure. Two things are
-            deliberately absent rather than half-done:
+            Being specific about what is missing matters more than sounding finished:
           </p>
           <Card className="mt-5 p-5">
             <ul className="space-y-2.5 text-sm leading-relaxed text-charcoal-700">
               {[
-                'Document storage. Your files never leave the browser tab. Storing a marriage certificate, a passport scan and a Social Security card together would make us a target worth attacking, and we would rather not hold them at all than hold them adequately.',
-                'Syncing your checklist between devices. Your progress lives in each browser, which is why signing in on a new phone restores your Premium but not your ticks. Syncing it would mean keeping your name, address and marriage details on our server, and we decided that trade was not worth it.',
+                'Per-file access audit logs in the product UI. Access is gated by session and account ownership; a durable access log table is a follow-up, not shipped here.',
+                'Customer-managed encryption keys. Vault objects use R2’s default server-side encryption, not a key you bring or rotate yourself.',
+                'Household / multi-person plans. Premium Plus is listed as coming later — this build is still one person, one account.',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2.5">
                   <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary-400" />

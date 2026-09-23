@@ -11,15 +11,20 @@
  * plainly that Premium can't be bought here instead of pretending otherwise.
  *
  * ── What is never sent ────────────────────────────────────────────────────
- * Nothing from the profile. Her name, address, date of birth, marriage details
- * and progress stay in this browser. The only personal thing that crosses the
- * wire is the email address she types to create an account.
+ * Guests keep the profile in the browser only. Signed-in accounts sync
+ * checklist/profile JSON via `/api/plan`, and Premium vault bytes via
+ * `/api/documents`. We still never send SSN, DL numbers, account numbers, or
+ * passwords — those fields are not in the data model.
  */
+
+import type { AppState } from '@/types';
 
 export type StripeMode = 'absent' | 'test' | 'live';
 
 export interface ServerConfig {
   accounts: boolean;
+  /** True when R2 document vault is bound and accounts are on. */
+  documents: boolean;
   payments: boolean;
   /** True only when a real sk_test_ key is installed (see stripeMode). */
   testMode: boolean;
@@ -39,6 +44,7 @@ export interface Account {
 
 export const OFFLINE_CONFIG: ServerConfig = {
   accounts: false,
+  documents: false,
   payments: false,
   testMode: false,
   stripeMode: 'absent',
@@ -111,6 +117,7 @@ function normalizeConfig(raw: Partial<ServerConfig>): ServerConfig {
         : 'absent';
   return {
     accounts: Boolean(raw.accounts),
+    documents: Boolean(raw.documents),
     payments: Boolean(raw.payments),
     /** Prefer stripeMode when present; never treat "absent" as test. */
     testMode: stripeMode === 'test',
@@ -181,4 +188,86 @@ export function saveReminders(optIn: boolean, reminders: ReminderPayload[]) {
 
 export function deleteAccount() {
   return request<{ ok: true }>('/account', { method: 'DELETE' });
+}
+
+// ---------------------------------------------------------------------------
+// Plan sync + document vault
+// ---------------------------------------------------------------------------
+
+
+export interface PlanResponse {
+  state: AppState | null;
+  revision: number;
+  updatedAt?: number;
+}
+
+export function fetchPlan() {
+  return request<PlanResponse>('/plan');
+}
+
+export function savePlan(state: AppState, revision: number | null) {
+  return request<{ ok: true; revision: number; updatedAt: number }>('/plan', {
+    method: 'PUT',
+    body: JSON.stringify({ state, revision }),
+  });
+}
+
+export async function uploadDocument(args: {
+  id: string;
+  kindId: string;
+  file: File;
+}): Promise<{ ok: true; id: string; fileName: string; contentType: string; byteSize: number; kindId: string }> {
+  const form = new FormData();
+  form.set('id', args.id);
+  form.set('kindId', args.kindId);
+  form.set('file', args.file, args.file.name);
+
+  let response: Response;
+  try {
+    response = await fetch(endpoint('/documents'), {
+      method: 'POST',
+      body: form,
+      credentials: 'same-origin',
+    });
+  } catch {
+    throw new ApiError(0, 'network', 'We could not reach AfterIDo. Check your connection.');
+  }
+
+  const textBody = await response.text();
+  const payload = textBody ? safeParse(textBody) : {};
+  if (!response.ok) {
+    const body = payload as { error?: string; message?: string };
+    throw new ApiError(
+      response.status,
+      body.error ?? 'error',
+      body.message ?? 'Something went wrong.',
+    );
+  }
+  return payload as {
+    ok: true;
+    id: string;
+    fileName: string;
+    contentType: string;
+    byteSize: number;
+    kindId: string;
+  };
+}
+
+export async function fetchDocumentBlob(id: string): Promise<Blob> {
+  let response: Response;
+  try {
+    response = await fetch(endpoint(`/documents/${encodeURIComponent(id)}`), {
+      credentials: 'same-origin',
+    });
+  } catch {
+    throw new ApiError(0, 'network', 'We could not reach AfterIDo. Check your connection.');
+  }
+  if (!response.ok) {
+    throw new ApiError(response.status, 'error', 'Could not download that document.');
+  }
+  return response.blob();
+}
+
+export function deleteRemoteDocument(id: string) {
+  return request<{ ok: true }>(`/documents/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }

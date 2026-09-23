@@ -267,8 +267,9 @@ export interface StoredDocument {
   mimeType: string;
   uploadedAt: string;
   /**
-   * True while the file's bytes are still held in this browser tab's memory.
-   * They are intentionally dropped on reload — see src/lib/documentStorage.ts.
+   * True while file bytes are available in this tab (session cache / just
+   * uploaded). Remote vault files may be false after reload until fetched from
+   * `/api/documents/:id` — see src/lib/documentStorage.ts.
    */
   availableInSession: boolean;
 }

@@ -60,6 +60,17 @@
     }
   ],
 
+  // Document vault bytes. Create the bucket once in the dashboard (or
+  // `wrangler r2 bucket create after-i-do-documents`) before the first deploy
+  // that expects uploads — see OPERATOR_ACTIONS.md. Binding name DOCUMENTS is
+  // what worker/env.ts reads as env.DOCUMENTS.
+  "r2_buckets": [
+    {
+      "binding": "DOCUMENTS",
+      "bucket_name": "after-i-do-documents"
+    }
+  ],
+
   // Hourly sweep that sends reminder emails that have come due.
   "triggers": {
     "crons": ["0 * * * *"]

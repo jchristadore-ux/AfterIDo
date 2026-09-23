@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Image, Info, ShieldCheck, Trash2, Upload } from 'lucide-react';
 import type { StoredDocument } from '@/types';
@@ -7,9 +7,13 @@ import { DOCUMENT_KINDS, DOCUMENT_KIND_BY_ID } from '@/data/documents';
 import { TASK_BY_ID } from '@/data/tasks';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import {
+  describeRetention,
   documentStore,
   newDocumentId,
+  remoteDocumentStore,
   safeFileName,
+  sessionDocumentStore,
+  setDocumentStore,
   validateUpload,
 } from '@/lib/documentStorage';
 import {
@@ -49,10 +53,15 @@ export function Documents() {
 }
 
 function Vault() {
-  const { state, addDocument, removeDocument } = useApp();
+  const { state, addDocument, removeDocument, remoteDocuments } = useApp();
   const [kindId, setKindId] = useState(DOCUMENT_KINDS[0].id);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setDocumentStore(remoteDocuments ? remoteDocumentStore : sessionDocumentStore);
+  }, [remoteDocuments]);
 
   async function onFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -64,33 +73,48 @@ function Vault() {
       return;
     }
     setError(null);
+    setBusy(true);
 
     const id = newDocumentId();
-    await documentStore.put(id, file);
+    try {
+      await documentStore.put(id, file, { kindId });
 
-    const doc: StoredDocument = {
-      id,
-      kindId,
-      fileName: safeFileName(file.name),
-      sizeBytes: file.size,
-      mimeType: file.type || 'application/octet-stream',
-      uploadedAt: new Date().toISOString(),
-      availableInSession: true,
-    };
-    addDocument(doc);
-    if (inputRef.current) inputRef.current.value = '';
+      const doc: StoredDocument = {
+        id,
+        kindId,
+        fileName: safeFileName(file.name),
+        sizeBytes: file.size,
+        mimeType: file.type || 'application/octet-stream',
+        uploadedAt: new Date().toISOString(),
+        availableInSession: true,
+      };
+      addDocument(doc);
+      if (inputRef.current) inputRef.current.value = '';
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed. Try again.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <div className="space-y-5">
       <Callout tone="success" icon={<ShieldCheck size={16} />} title="How your files are handled">
-        <p>
-          Your marriage certificate and your ID together are everything someone would need to
-          impersonate you, so this build takes the cautious route: files you add stay in this
-          browser tab and are <strong>never written to disk or sent anywhere</strong>. Close the
-          tab and the file is gone — only the name, size and what it’s for are remembered, so
-          your checklist still knows you have it.
-        </p>
+        {remoteDocuments ? (
+          <p>
+            Vault files are stored in your AfterIDo account on Cloudflare R2, scoped to you and
+            encrypted at rest by the provider. Only a signed-in Premium session can upload or
+            download them. We still never ask for Social Security numbers, driver’s licence
+            numbers, account numbers or passwords.
+          </p>
+        ) : (
+          <p>
+            Document storage for your account is not enabled on this deployment (or you are in
+            demo mode), so files you add stay in this browser tab and are{' '}
+            <strong>not uploaded</strong>. Close the tab and the file is gone — only the name,
+            size and what it’s for are remembered.
+          </p>
+        )}
         <p className="mt-2">
           <Link to="/trust">Read the full privacy note →</Link>
         </p>
@@ -121,9 +145,10 @@ function Vault() {
               type="button"
               variant="secondary"
               block
+              disabled={busy}
               onClick={() => inputRef.current?.click()}
             >
-              <Upload size={16} /> Choose file
+              <Upload size={16} /> {busy ? 'Uploading…' : 'Choose file'}
             </Button>
           </div>
         </div>
@@ -146,7 +171,12 @@ function Vault() {
         <Card className="overflow-hidden">
           <ul className="divide-y divide-charcoal-100">
             {state.documents.map((doc) => (
-              <DocumentRow key={doc.id} doc={doc} onRemove={() => removeDocument(doc.id)} />
+              <DocumentRow
+                key={doc.id}
+                doc={doc}
+                remote={remoteDocuments}
+                onRemove={() => removeDocument(doc.id)}
+              />
             ))}
           </ul>
         </Card>
@@ -155,14 +185,41 @@ function Vault() {
   );
 }
 
-function DocumentRow({ doc, onRemove }: { doc: StoredDocument; onRemove: () => void }) {
+function DocumentRow({
+  doc,
+  remote,
+  onRemove,
+}: {
+  doc: StoredDocument;
+  remote: boolean;
+  onRemove: () => void;
+}) {
   const kind = DOCUMENT_KIND_BY_ID[doc.kindId];
   const usedFor = (kind?.usedFor ?? [])
     .map((id) => TASK_BY_ID[id])
     .filter(Boolean)
     .slice(0, 3);
   const isImage = doc.mimeType.startsWith('image/');
-  const url = doc.availableInSession ? documentStore.getObjectUrl(doc.id) : null;
+  const [url, setUrl] = useState<string | null>(
+    doc.availableInSession ? documentStore.getObjectUrl(doc.id) : null,
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    if (url) return;
+    if (doc.availableInSession) {
+      setUrl(documentStore.getObjectUrl(doc.id));
+      return;
+    }
+    if (remote && documentStore.ensureLocal) {
+      void documentStore.ensureLocal(doc.id).then((next) => {
+        if (!cancelled) setUrl(next);
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [doc.id, doc.availableInSession, remote, url]);
 
   return (
     <li className="flex items-start gap-3.5 p-4">
@@ -182,6 +239,7 @@ function DocumentRow({ doc, onRemove }: { doc: StoredDocument; onRemove: () => v
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-charcoal-400">
           <span>Added {formatDateTime(doc.uploadedAt)}</span>
           <span>{formatBytes(doc.sizeBytes)}</span>
+          <span>{describeRetention(doc, remote)}</span>
           {url ? (
             <a
               href={url}
@@ -191,6 +249,8 @@ function DocumentRow({ doc, onRemove }: { doc: StoredDocument; onRemove: () => v
             >
               Open
             </a>
+          ) : remote ? (
+            <span>Open to load from vault</span>
           ) : (
             <span>File not retained</span>
           )}
@@ -211,8 +271,7 @@ function DocumentRow({ doc, onRemove }: { doc: StoredDocument; onRemove: () => v
       <button
         type="button"
         onClick={() => {
-          documentStore.remove(doc.id);
-          onRemove();
+          void Promise.resolve(documentStore.remove(doc.id)).finally(onRemove);
         }}
         aria-label={`Remove ${doc.fileName}`}
         className="shrink-0 rounded-lg p-2 text-charcoal-400 hover:bg-surface-sunk hover:text-destructive-600"

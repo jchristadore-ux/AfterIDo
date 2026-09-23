@@ -1,41 +1,42 @@
+import * as api from '@/lib/api';
 import type { StoredDocument } from '@/types';
 
 /**
  * Document vault storage.
  *
  * A marriage certificate, a passport scan and a Social Security card together
- * are everything an identity thief needs. So this build makes a deliberate
- * choice: **uploaded file bytes are never written to disk.**
+ * are everything an identity thief needs.
  *
- * `SessionOnlyStore` keeps the bytes in a module-level Map for the lifetime of
- * the tab. Reload the page and they are gone; only the metadata (file name,
- * size, what it is used for) survives in localStorage. The UI says so plainly
- * rather than implying a security guarantee it cannot make in a browser.
+ * ── Guests / documents capability off ─────────────────────────────────────
+ * `SessionOnlyStore` keeps bytes in a module-level Map for the lifetime of the
+ * tab. Reload and they are gone; only metadata survives in the plan.
  *
- * ── Where the real integration goes ───────────────────────────────────────
- * Production implements `DocumentStore` against a server:
- *   • client requests a short-lived, single-use signed upload URL
- *   • bytes go straight to object storage, encrypted at rest with a
- *     per-tenant KMS key, never through the app server
- *   • downloads issue signed URLs that expire in minutes
- *   • every access is written to an audit log
- *   • file names are treated as untrusted input and never interpolated
- * Nothing else in the app changes — every caller goes through this interface.
+ * ── Signed-in Premium when `/api/config.documents` is true ─────────────────
+ * `RemoteDocumentStore` uploads through the Worker (`POST /api/documents`) into
+ * Cloudflare R2 under `{userId}/{docId}`. R2 encrypts at rest by default. The
+ * Worker checks session + Premium and never returns another user's object.
+ * Session cache still holds bytes for instant preview in the current tab.
  */
 
+export interface DocumentPutMeta {
+  kindId: string;
+}
+
 export interface DocumentStore {
-  put(id: string, file: File): Promise<void>;
-  /** An object URL for previewing, or null if the bytes are gone. */
+  put(id: string, file: File, meta?: DocumentPutMeta): Promise<void>;
+  /** An object URL for previewing, or null if the bytes are gone / not yet fetched. */
   getObjectUrl(id: string): string | null;
+  /** Fetch remote bytes into the session cache when needed. */
+  ensureLocal?(id: string): Promise<string | null>;
   has(id: string): boolean;
-  remove(id: string): void;
+  remove(id: string): void | Promise<void>;
 }
 
 class SessionOnlyStore implements DocumentStore {
   private blobs = new Map<string, Blob>();
   private urls = new Map<string, string>();
 
-  async put(id: string, file: File): Promise<void> {
+  async put(id: string, file: File, _meta?: DocumentPutMeta): Promise<void> {
     this.blobs.set(id, file.slice(0, file.size, file.type));
   }
 
@@ -62,7 +63,54 @@ class SessionOnlyStore implements DocumentStore {
   }
 }
 
-export const documentStore: DocumentStore = new SessionOnlyStore();
+/**
+ * Worker-mediated R2 vault. Uploads go to `/api/documents`; downloads come back
+ * the same way. A session Map mirrors bytes for preview until the tab closes.
+ */
+class RemoteDocumentStore implements DocumentStore {
+  private local = new SessionOnlyStore();
+
+  async put(id: string, file: File, meta?: DocumentPutMeta): Promise<void> {
+    if (!meta?.kindId) throw new Error('kindId required for remote upload');
+    await api.uploadDocument({ id, kindId: meta.kindId, file });
+    await this.local.put(id, file);
+  }
+
+  getObjectUrl(id: string): string | null {
+    return this.local.getObjectUrl(id);
+  }
+
+  async ensureLocal(id: string): Promise<string | null> {
+    if (this.local.has(id)) return this.local.getObjectUrl(id);
+    const blob = await api.fetchDocumentBlob(id);
+    const file = new File([blob], 'document', { type: blob.type || 'application/octet-stream' });
+    await this.local.put(id, file);
+    return this.local.getObjectUrl(id);
+  }
+
+  has(id: string): boolean {
+    return this.local.has(id);
+  }
+
+  async remove(id: string): Promise<void> {
+    try {
+      await api.deleteRemoteDocument(id);
+    } catch {
+      // Still drop the local cache; plan metadata removal is the caller's job.
+    }
+    this.local.remove(id);
+  }
+}
+
+export const sessionDocumentStore: DocumentStore = new SessionOnlyStore();
+export const remoteDocumentStore: DocumentStore = new RemoteDocumentStore();
+
+/** Active store — Documents.tsx selects remote when config.documents is on. */
+export let documentStore: DocumentStore = sessionDocumentStore;
+
+export function setDocumentStore(store: DocumentStore): void {
+  documentStore = store;
+}
 
 export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 
@@ -100,8 +148,13 @@ export function newDocumentId(): string {
   return `doc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function describeRetention(doc: StoredDocument): string {
-  return doc.availableInSession
-    ? 'Stored in this browser tab only'
+export function describeRetention(doc: StoredDocument, vaultRemote = false): string {
+  if (doc.availableInSession) {
+    return vaultRemote
+      ? 'In your account vault — also cached in this tab'
+      : 'Stored in this browser tab only';
+  }
+  return vaultRemote
+    ? 'In your account vault (open to view)'
     : 'File closed — details kept, file not retained';
 }

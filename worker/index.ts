@@ -2,11 +2,12 @@
  * AfterIDo's API.
  *
  * ── What lives here and why ───────────────────────────────────────────────
- * The app is a static SPA; the only reason a server exists at all is that two
- * things cannot be done honestly in a browser: taking a payment, and deciding
- * whether somebody has paid. Everything else — her name, her address, her
- * marriage details, her progress — stays in her own browser and never reaches
- * this code.
+ * The app is a static SPA; the server exists because payments, entitlement,
+ * account sessions, and (when she signs in) plan sync + document vault cannot
+ * be done honestly in a browser alone. Guests still keep everything local;
+ * signed-in accounts sync checklist/profile JSON to D1 and Premium vault
+ * bytes to R2. We still never collect SSN, DL numbers, account numbers, or
+ * passwords.
  *
  * ── The rule that shapes the design ───────────────────────────────────────
  * Premium is granted in exactly two places, and both of them ask Stripe rather
@@ -19,6 +20,7 @@ import {
   accountsEnabled,
   configWarnings,
   devSignInLinksAllowed,
+  documentsEnabled,
   emailEnabled,
   originOf,
   paymentsEnabled,
@@ -38,11 +40,17 @@ import {
 import { randomToken, signSession, verifySession } from './crypto.ts';
 import {
   bumpSessionVersion,
+  deleteAllUserDocuments,
+  deleteUserDocument,
+  deleteUserPlan,
   dueReminders,
   findOrCreateUser,
   findUserById,
+  findUserDocument,
   findUserForCharge,
+  getUserPlan,
   grantPremium,
+  insertUserDocument,
   isPlausibleEmail,
   markReminderFailed,
   markReminderSent,
@@ -50,6 +58,7 @@ import {
   purgeExpiredLoginTokens,
   purgeOldEvents,
   purgeRateLimits,
+  putUserPlan,
   rateLimit,
   recordEvent,
   redeemLoginToken,
@@ -60,6 +69,12 @@ import {
   touchUser,
   type UserRow,
 } from './db.ts';
+import {
+  PLAN_JSON_MAX_BYTES,
+  documentKeyBelongsToUser,
+  documentObjectKey,
+  sanitizePlanPayload,
+} from './planState.ts';
 import { createCheckoutSession, retrieveCheckoutSession, verifyWebhook } from './stripe.ts';
 import { receiptEmail, sendEmail, signInEmail } from './email.ts';
 import { robots, sitemap, withPageMeta } from './seo.ts';
@@ -144,6 +159,15 @@ async function route(
     return fail(403, 'bad_origin', 'This request did not come from AfterIDo.');
   }
 
+  // Document id routes: /api/documents/:id
+  const docMatch = path.match(/^\/api\/documents\/([^/]+)$/);
+  if (docMatch) {
+    const docId = decodeURIComponent(docMatch[1]);
+    if (method === 'GET') return handleDocumentGet(request, env, docId);
+    if (method === 'DELETE') return handleDocumentDelete(request, env, docId);
+    return fail(405, 'method_not_allowed', 'Use GET or DELETE for a document.');
+  }
+
   switch (`${method} ${path}`) {
     case 'POST /api/auth/request-link':
       return handleRequestLink(request, env, ctx);
@@ -153,6 +177,12 @@ async function route(
       return handleSignOutEverywhere(request, env);
     case 'GET /api/me':
       return handleMe(request, env);
+    case 'GET /api/plan':
+      return handleGetPlan(request, env);
+    case 'PUT /api/plan':
+      return handlePutPlan(request, env);
+    case 'POST /api/documents':
+      return handleDocumentUpload(request, env);
     case 'POST /api/checkout':
       return handleCheckout(request, env);
     case 'POST /api/checkout/confirm':
@@ -357,6 +387,31 @@ async function handleDeleteAccount(request: Request, env: Env): Promise<Response
   const user = await currentUser(request, env);
   if (!user) return fail(401, 'signed_out', 'Not signed in.');
   const db = env.DB as D1Database;
+
+  // Wipe vault objects first (best-effort) so orphaned R2 keys do not linger
+  // after the metadata rows are gone.
+  const docs = await deleteAllUserDocuments(db, user.id);
+  if (env.DOCUMENTS) {
+    for (const doc of docs) {
+      if (documentKeyBelongsToUser(user.id, doc.r2_key)) {
+        try {
+          await env.DOCUMENTS.delete(doc.r2_key);
+        } catch (error) {
+          console.log(`[account:delete] r2 ${doc.r2_key}: ${(error as Error)?.message ?? 'unknown'}`);
+        }
+      }
+    }
+    // Also clear any leftovers under the user prefix.
+    try {
+      const listed = await env.DOCUMENTS.list({ prefix: `${user.id}/` });
+      for (const obj of listed.objects) {
+        await env.DOCUMENTS.delete(obj.key);
+      }
+    } catch (error) {
+      console.log(`[account:delete] r2 list: ${(error as Error)?.message ?? 'unknown'}`);
+    }
+  }
+  await deleteUserPlan(db, user.id);
 
   // Purchases are kept, unlinked, because payment records have their own
   // retention obligations; everything that identifies her is removed. The
@@ -591,6 +646,222 @@ async function userForStripeObject(
     return findOrCreateUser(db, normaliseEmail(email));
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Plan sync
+// ---------------------------------------------------------------------------
+
+async function handleGetPlan(request: Request, env: Env): Promise<Response> {
+  const user = await currentUser(request, env);
+  if (!user) return fail(401, 'signed_out', 'Sign in to load your plan.');
+  const row = await getUserPlan(env.DB as D1Database, user.id);
+  if (!row) return json({ state: null, revision: 0 });
+  let state: unknown = null;
+  try {
+    state = JSON.parse(row.state_json);
+  } catch {
+    return fail(500, 'corrupt_plan', 'Stored plan could not be read. Contact support.');
+  }
+  return json({ state, revision: row.revision, updatedAt: row.updated_at });
+}
+
+async function handlePutPlan(request: Request, env: Env): Promise<Response> {
+  const user = await currentUser(request, env);
+  if (!user) return fail(401, 'signed_out', 'Sign in to save your plan.');
+  const db = env.DB as D1Database;
+
+  if (!(await rateLimit(db, `plan:${user.id}`, 120, 3600))) {
+    return fail(429, 'rate_limited', 'Too many plan saves. Try again shortly.');
+  }
+
+  const body = await readJson<{ state?: unknown; revision?: number }>(request, PLAN_JSON_MAX_BYTES);
+  if (!body || body.state === undefined) {
+    return fail(400, 'invalid_body', 'Expected a JSON body with a state object.');
+  }
+
+  const sanitized = sanitizePlanPayload(body.state);
+  if (!sanitized.ok) {
+    const status = sanitized.code === 'too_large' ? 413 : 400;
+    return fail(status, sanitized.code, sanitized.message);
+  }
+
+  const expected =
+    typeof body.revision === 'number' && Number.isFinite(body.revision)
+      ? Math.floor(body.revision)
+      : null;
+
+  const saved = await putUserPlan(db, user.id, sanitized.stateJson, expected);
+  if (!saved) {
+    return fail(409, 'revision_conflict', 'Your plan changed on another device. Reload and try again.');
+  }
+  return json({ ok: true, revision: saved.revision, updatedAt: saved.updated_at });
+}
+
+// ---------------------------------------------------------------------------
+// Document vault (R2)
+// ---------------------------------------------------------------------------
+
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+const ACCEPTED_UPLOAD_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/heic',
+  'image/webp',
+]);
+
+function safeUploadName(name: string): string {
+  return name.replace(/[\u0000-\u001f<>:"\/\\|?*]/g, '').trim().slice(0, 120) || 'document';
+}
+
+function uploadTypeOk(fileName: string, contentType: string): boolean {
+  const extOk = /\.(pdf|jpe?g|png|heic|webp)$/i.test(fileName);
+  if (contentType && ACCEPTED_UPLOAD_TYPES.has(contentType)) return true;
+  return extOk;
+}
+
+async function handleDocumentUpload(request: Request, env: Env): Promise<Response> {
+  const user = await currentUser(request, env);
+  if (!user) return fail(401, 'signed_out', 'Sign in to upload documents.');
+  if (user.plan !== 'premium') {
+    return fail(402, 'premium_required', 'The document vault is a Premium feature.');
+  }
+  if (!documentsEnabled(env)) {
+    return fail(503, 'documents_unavailable', 'Document storage is not enabled on this deployment.');
+  }
+  const db = env.DB as D1Database;
+  const bucket = env.DOCUMENTS as R2Bucket;
+
+  if (!(await rateLimit(db, `docs:${user.id}`, 40, 3600))) {
+    return fail(429, 'rate_limited', 'Too many uploads. Try again shortly.');
+  }
+
+  const contentTypeHeader = request.headers.get('content-type') || '';
+  if (!contentTypeHeader.includes('multipart/form-data')) {
+    return fail(400, 'invalid_body', 'Expected multipart form data with a file.');
+  }
+
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch {
+    return fail(400, 'invalid_body', 'Could not read the upload.');
+  }
+
+  const entry = form.get('file');
+  // Cloudflare Workers typings: FormDataEntryValue is File | string. Treat as Blob.
+  if (!entry || typeof entry === 'string') {
+    return fail(400, 'missing_file', 'Choose a file to upload.');
+  }
+  const upload = entry as Blob & { name?: string };
+  const idRaw = form.get('id');
+  const kindRaw = form.get('kindId');
+  const id = typeof idRaw === 'string' ? idRaw.trim().slice(0, 64) : '';
+  const kindId = typeof kindRaw === 'string' ? kindRaw.trim().slice(0, 64) : '';
+  if (!id || !/^doc_[a-z0-9_]+$/i.test(id)) {
+    return fail(400, 'invalid_id', 'Document id is missing or invalid.');
+  }
+  if (!kindId) {
+    return fail(400, 'invalid_kind', 'Document kind is required.');
+  }
+
+  const fileName = safeUploadName(upload.name || 'document');
+  const contentType = (upload.type || 'application/octet-stream').slice(0, 120);
+  if (upload.size <= 0 || upload.size > MAX_UPLOAD_BYTES) {
+    return fail(413, 'too_large', 'That file is larger than 15 MB. Try a photo instead of a scan.');
+  }
+  if (!uploadTypeOk(fileName, contentType)) {
+    return fail(400, 'bad_type', 'Please upload a PDF or a photo (JPG, PNG, HEIC).');
+  }
+
+  const existing = await findUserDocument(db, user.id, id);
+  if (existing) {
+    return fail(409, 'exists', 'A document with that id already exists.');
+  }
+
+  const r2Key = documentObjectKey(user.id, id);
+  if (!documentKeyBelongsToUser(user.id, r2Key)) {
+    return fail(400, 'invalid_key', 'Invalid storage key.');
+  }
+
+  await bucket.put(r2Key, upload, {
+    httpMetadata: { contentType },
+    customMetadata: { userId: user.id, kindId, fileName },
+  });
+
+  try {
+    await insertUserDocument(db, {
+      id,
+      user_id: user.id,
+      r2_key: r2Key,
+      file_name: fileName,
+      content_type: contentType,
+      byte_size: upload.size,
+      kind_id: kindId,
+    });
+  } catch (error) {
+    try {
+      await bucket.delete(r2Key);
+    } catch {
+      /* best effort */
+    }
+    throw error;
+  }
+
+  return json({
+    ok: true,
+    id,
+    fileName,
+    contentType,
+    byteSize: upload.size,
+    kindId,
+  });
+}
+
+async function handleDocumentGet(request: Request, env: Env, docId: string): Promise<Response> {
+  const user = await currentUser(request, env);
+  if (!user) return fail(401, 'signed_out', 'Sign in to download documents.');
+  if (!documentsEnabled(env)) {
+    return fail(503, 'documents_unavailable', 'Document storage is not enabled on this deployment.');
+  }
+  const db = env.DB as D1Database;
+  const row = await findUserDocument(db, user.id, docId);
+  if (!row || !documentKeyBelongsToUser(user.id, row.r2_key)) {
+    return fail(404, 'not_found', 'No such document.');
+  }
+
+  const obj = await (env.DOCUMENTS as R2Bucket).get(row.r2_key);
+  if (!obj) return fail(404, 'not_found', 'No such document.');
+
+  const headers = new Headers();
+  headers.set('Content-Type', row.content_type || 'application/octet-stream');
+  headers.set('Content-Disposition', `inline; filename="${row.file_name.replace(/"/g, '')}"`);
+  headers.set('Cache-Control', 'private, no-store');
+  headers.set('X-Content-Type-Options', 'nosniff');
+  if (obj.size) headers.set('Content-Length', String(obj.size));
+
+  return new Response(obj.body, { status: 200, headers });
+}
+
+async function handleDocumentDelete(request: Request, env: Env, docId: string): Promise<Response> {
+  const user = await currentUser(request, env);
+  if (!user) return fail(401, 'signed_out', 'Sign in to delete documents.');
+  if (!documentsEnabled(env)) {
+    return fail(503, 'documents_unavailable', 'Document storage is not enabled on this deployment.');
+  }
+  const db = env.DB as D1Database;
+  const row = await deleteUserDocument(db, user.id, docId);
+  if (!row) return fail(404, 'not_found', 'No such document.');
+
+  if (env.DOCUMENTS && documentKeyBelongsToUser(user.id, row.r2_key)) {
+    try {
+      await env.DOCUMENTS.delete(row.r2_key);
+    } catch (error) {
+      console.log(`[documents:delete] ${(error as Error)?.message ?? 'unknown'}`);
+    }
+  }
+  return json({ ok: true });
 }
 
 // ---------------------------------------------------------------------------

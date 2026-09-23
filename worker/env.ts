@@ -9,8 +9,14 @@
 export interface Env {
   /** The built SPA in ./dist, served straight from the edge. */
   ASSETS: Fetcher;
-  /** D1: accounts and entitlements only. See migrations/0001_init.sql. */
+  /** D1: accounts, entitlements, synced plan JSON, document metadata. */
   DB?: D1Database;
+  /**
+   * R2 bucket for Premium document vault bytes. Keys are `{userId}/{docId}`.
+   * Absent → `/api/config` reports `documents: false` and the client keeps
+   * session-only storage.
+   */
+  DOCUMENTS?: R2Bucket;
 
   // ── Secrets ──────────────────────────────────────────────────────────────
   /** HMAC key for session cookies. Rotating it signs everyone out. */
@@ -56,6 +62,11 @@ export type StripeMode = 'absent' | 'test' | 'live';
 export interface PublicConfig {
   /** True when accounts can be created (database + session secret present). */
   accounts: boolean;
+  /**
+   * True when signed-in Premium users can upload vault files to R2.
+   * Requires accounts plus the DOCUMENTS R2 binding.
+   */
+  documents: boolean;
   /** True when a real Stripe Checkout session can be created and verified. */
   payments: boolean;
   /**
@@ -156,10 +167,19 @@ export function stripeModeOf(env: Env): StripeMode {
   return 'absent';
 }
 
+/**
+ * Document vault needs accounts (so we know whose objects they are) and an R2
+ * binding. Without the bucket the feature stays off rather than half-working.
+ */
+export function documentsEnabled(env: Env): boolean {
+  return Boolean(accountsEnabled(env) && env.DOCUMENTS);
+}
+
 export function publicConfig(env: Env): PublicConfig {
   const mode = stripeModeOf(env);
   return {
     accounts: accountsEnabled(env),
+    documents: documentsEnabled(env),
     payments: paymentsEnabled(env),
     testMode: mode === 'test',
     stripeMode: mode,
@@ -179,6 +199,9 @@ export function publicConfig(env: Env): PublicConfig {
 export function configWarnings(env: Env): string[] {
   const warnings: string[] = [];
   if (!env.DB) warnings.push('DB binding is missing — accounts and analytics are off.');
+  if (accountsEnabled(env) && !env.DOCUMENTS) {
+    warnings.push('DOCUMENTS R2 binding is missing — document vault uploads stay session-only.');
+  }
   if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32) {
     warnings.push('SESSION_SECRET is missing or shorter than 32 characters — accounts are off.');
   }

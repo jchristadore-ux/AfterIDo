@@ -178,8 +178,8 @@ export function Landing() {
               We don’t want most of it.
             </h2>
             <p className="mt-4 text-lg leading-relaxed text-charcoal-700">
-              Your name, address, date of birth and marriage details are stored in your own browser
-              and never sent to us.
+              We never ask for Social Security numbers, driver’s licence numbers, account numbers
+              or passwords. Guests keep the plan in this browser.
               {trustAccountSentence(config.accounts)}
             </p>
             <Link
