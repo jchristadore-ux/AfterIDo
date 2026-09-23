@@ -12,10 +12,11 @@
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:migrate": "wrangler d1 migrations apply DB --remote",
     "deploy": "npm run build && wrangler deploy",
-    "test": "node --experimental-strip-types worker/verify.test.mts && node --experimental-strip-types worker/env.test.mts && node --experimental-strip-types --experimental-sqlite worker/entitlement.test.mts && node --experimental-strip-types --experimental-sqlite worker/planDocs.test.mts",
+    "test": "node --experimental-strip-types worker/verify.test.mts && node --experimental-strip-types worker/env.test.mts && node --experimental-strip-types --experimental-sqlite worker/entitlement.test.mts && node --experimental-strip-types --experimental-sqlite worker/planDocs.test.mts && node --experimental-strip-types --experimental-sqlite worker/email.test.mts",
     "check": "npm run typecheck && npm test && npm run build",
     "verify:payments": "node --experimental-strip-types scripts/verify-payments.ts",
-    "check:state-links": "node --experimental-strip-types scripts/check-state-links.ts"
+    "check:state-links": "node --experimental-strip-types scripts/check-state-links.ts",
+    "check:email": "node --experimental-strip-types scripts/verify-email.ts"
   },
   "dependencies": {
     "lucide-react": "^1.33.0",

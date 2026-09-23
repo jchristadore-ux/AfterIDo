@@ -147,7 +147,9 @@ export function AccountPanel() {
                 </span>
                 <span className="mt-1 block text-sm leading-relaxed text-charcoal-500">
                   A short nudge for the reminders you’ve set on individual tasks, plus one when a
-                  waiting period is likely to be over. Nothing else — no newsletter, no marketing.
+                  waiting period is likely to be over. Sent on an hourly schedule when mail is
+                  configured — best-effort, not a delivery guarantee. Nothing else — no newsletter,
+                  no marketing.
                 </span>
               </span>
             </label>

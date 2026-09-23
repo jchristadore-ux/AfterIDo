@@ -12,7 +12,7 @@ AfterIDo uses its **own** Stripe account — not FlipPulse, not FullSend.
 - [ ] Cloudflare Worker `afterido` is deployed from `main`
 - [ ] `GET https://after-i-do.com/api/config` returns `accounts: true`, `email: true`
 - [ ] Resend domain `after-i-do.com` is verified for **sending**
-- [ ] `hello@after-i-do.com` can **receive** mail (Resend verify ≠ inbox — use Cloudflare Email Routing or equivalent). Terms/Privacy publish this address for refunds.
+- [ ] `hello@after-i-do.com` can **receive** mail (see **§8** — Resend domain verify ≠ receive inbox). Terms/Privacy publish this address for refunds.
 - [ ] You are logged into the **AfterIDo** Stripe Dashboard (confirm business name)
 
 ---
@@ -171,3 +171,71 @@ reports `documents: true`.
 - [ ] Optional `document_access_log` table for every GET/PUT/DELETE
 - [ ] Optional app-level encryption with a key derived from `SESSION_SECRET`
 - [ ] Lifecycle / abort multipart rules if you later switch to direct-to-R2 signed URLs
+
+---
+
+## 8. Resend email — sending domain ≠ receive inbox
+
+Resend verifies that AfterIDo may **send** as `@after-i-do.com`. That is not
+the same thing as having an inbox that can **receive** mail at
+`hello@after-i-do.com`.
+
+| What | Where | Notes |
+|------|--------|--------|
+| Sending domain | Resend → Domains → `after-i-do.com` verified | Required for magic links, receipts, reminders |
+| Receive inbox for `hello@` | Cloudflare Email Routing **or** Google Workspace (or similar) | Required for refunds / support. **Resend does not create this inbox.** |
+| From address | Worker var `EMAIL_FROM` | e.g. `AfterIDo <hello@after-i-do.com>` |
+| Support address | Worker var `SUPPORT_EMAIL` | Same `hello@…` — must receive mail |
+
+Checklist:
+
+- [ ] Resend domain `after-i-do.com` shows **Verified** (SPF/DKIM as Resend instructs)
+- [ ] Send a test from Resend (or `VERIFY_EMAIL_LIVE=1 npm run check:email`) to an inbox you control
+- [ ] Confirm `hello@after-i-do.com` receives mail (route to your personal inbox if needed)
+- [ ] Terms / Privacy / Contact publish `SUPPORT_EMAIL` and you can reply from that address
+
+### 8a. Run email checks locally
+
+CI runs the mocked suite via `npm test` (never sends mail, no Resend key required).
+
+```bash
+# Unit / mocked Resend + dead-letter (default — safe for CI)
+npm run check:email
+
+# Optional: send ONE live message to an inbox you control
+export VERIFY_EMAIL_LIVE=1
+export RESEND_API_KEY=re_…          # never commit
+export EMAIL_FROM='AfterIDo <hello@after-i-do.com>'
+export VERIFY_EMAIL_TO=you@example.com
+npm run check:email
+```
+
+`ALLOW_DEV_SIGNIN_LINKS=true` is a separate local-dev escape hatch that returns
+the magic link in the API response instead of emailing it. Never set it on the
+public Worker.
+
+### 8b. Reminder cron + dead letters
+
+- Cron: hourly (`wrangler.jsonc` → `triggers.crons: ["0 * * * *"]`).
+- Each due reminder is tried up to `MAX_REMINDER_ATTEMPTS` (4). Transient Resend
+  failures leave the row queued; the next hour retries.
+- When attempts hit the max, the Worker inserts one row into D1
+  `email_dead_letters` (primary key = reminder id) and sends **one** alert to
+  `SUPPORT_EMAIL` summarising redacted recipient + reminder id + subject.
+  Re-sweeps do not alert again.
+- If mail is disabled, the dead-letter row is still written and the Worker logs
+  loudly (`[email:dead-letter]`) instead of emailing.
+
+Inspect dead letters (when wrangler is logged in as the AfterIDo account):
+
+```bash
+npx wrangler d1 execute after-i-do --remote --command \
+  "SELECT reminder_id, subject, last_error, attempts, created_at FROM email_dead_letters ORDER BY created_at DESC LIMIT 20"
+```
+
+After merging this workstream, apply migration `0004_email_dead_letter.sql`:
+
+```bash
+npm run db:migrate
+```
+

@@ -416,8 +416,9 @@ export function TaskDetail() {
               </div>
             )}
             <p className="mt-3 text-xs text-charcoal-400">
-              Reminders appear on your dashboard. Email and push notifications aren’t enabled in
-              this build.
+              Reminders appear on your dashboard. With Premium and email reminders turned on in
+              your profile, we also email a short nudge around the due time (hourly sweep —
+              delivery is best-effort, not guaranteed). Push notifications are not available.
             </p>
           </Card>
         </PremiumGate>
