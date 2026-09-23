@@ -235,8 +235,8 @@ export const DETAILED_STATE_LANDINGS: StateLanding[] = [
         ],
         links: [
           {
-            label: 'Texas DPS — change information on your driver license or ID',
-            url: 'https://www.dps.texas.gov/section/driver-license/how-change-information-your-driver-license-or-id-card',
+            label: 'Texas.gov — driver services (DPS name / address changes)',
+            url: 'https://www.texas.gov/driver-services/index.html',
           },
         ],
       },
