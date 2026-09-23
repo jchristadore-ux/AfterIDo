@@ -237,6 +237,11 @@ export interface StateProfile {
   coverage: 'detailed' | 'basic';
   /** ISO date the guidance below was last reviewed against official sources. */
   lastReviewed: string;
+  /**
+   * Short honesty note naming the official sources used for a detailed profile.
+   * Optional; shown in the state guide when present.
+   */
+  sourceNote?: string;
   /** Keyed by TaskDefinition.id. */
   tasks: Partial<Record<string, StateTaskGuidance>>;
 }

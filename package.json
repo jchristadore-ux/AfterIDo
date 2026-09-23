@@ -14,7 +14,8 @@
     "deploy": "npm run build && wrangler deploy",
     "test": "node --experimental-strip-types worker/verify.test.mts && node --experimental-strip-types worker/env.test.mts && node --experimental-strip-types --experimental-sqlite worker/entitlement.test.mts",
     "check": "npm run typecheck && npm test && npm run build",
-    "verify:payments": "node --experimental-strip-types scripts/verify-payments.ts"
+    "verify:payments": "node --experimental-strip-types scripts/verify-payments.ts",
+    "check:state-links": "node --experimental-strip-types scripts/check-state-links.ts"
   },
   "dependencies": {
     "lucide-react": "^1.33.0",
