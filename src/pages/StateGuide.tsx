@@ -23,9 +23,8 @@ import type { StateProfile } from '@/types';
  * page can never claim something the app itself does not. The honest part is
  * the banner: a state we have researched says so, and a state we have not says
  * *that*, rather than dressing up the national defaults as local knowledge.
- * That is also what keeps fifty pages from being fifty thin doorway pages —
- * each one carries the real agency links for its state and admits what it does
- * not know.
+ * Basic pages stay reachable and `noindex`; only detailed states are in the
+ * sitemap and get Worker SSR body content (see `shared/stateLandings.ts`).
  */
 export function StateGuide() {
   const { slug = '' } = useParams();
@@ -52,6 +51,7 @@ export function StateGuide() {
       <Seo
         title={meta.title}
         description={meta.description}
+        noindex={!detailed}
         jsonLd={{
           '@context': 'https://schema.org',
           '@type': 'HowTo',

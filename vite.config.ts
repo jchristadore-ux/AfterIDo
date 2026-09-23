@@ -2,7 +2,8 @@ import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
-import { PAGE_META, canonicalUrl, stateSlug } from './shared/seo.ts';
+import { PAGE_META, canonicalUrl } from './shared/seo.ts';
+import { detailedStateSlugs } from './shared/stateLandings.ts';
 
 /**
  * `VITE_BASE` lets the same source deploy to a subpath without a code change —
@@ -24,17 +25,7 @@ import { PAGE_META, canonicalUrl, stateSlug } from './shared/seo.ts';
  * generated sitemap.
  */
 
-/** The state names the sitemap enumerates. Fixed since 1959. */
-const STATE_NAMES = [
-  'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut',
-  'Delaware', 'District of Columbia', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois',
-  'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts',
-  'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada',
-  'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota',
-  'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota',
-  'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia',
-  'Wisconsin', 'Wyoming',
-];
+/** Detailed-coverage state slugs only — same set the Worker sitemap uses. */
 
 /**
  * Writes robots.txt and sitemap.xml into the build.
@@ -42,8 +33,8 @@ const STATE_NAMES = [
  * On Cloudflare the Worker serves both dynamically, using the origin the
  * request actually arrived on, and those take precedence. These static copies
  * exist so a plain static host — GitHub Pages, a preview — still has them.
- * Both are generated from the same `shared/seo.ts` table the app renders from,
- * so a page can't be in the sitemap and missing from the site.
+ * Public page paths come from `shared/seo.ts`; state URLs come from
+ * `shared/stateLandings.ts` (detailed coverage only), matching the Worker.
  */
 function seoFiles(): Plugin {
   return {
@@ -56,7 +47,7 @@ function seoFiles(): Plugin {
         ...Object.entries(PAGE_META)
           .filter(([, meta]) => !meta.noindex)
           .map(([p]) => p),
-        ...STATE_NAMES.map((name) => `/name-change-after-marriage/${stateSlug(name)}`),
+        ...detailedStateSlugs().map((slug) => `/name-change-after-marriage/${slug}`),
       ];
 
       const urls = paths

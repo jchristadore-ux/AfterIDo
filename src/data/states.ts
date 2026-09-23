@@ -1483,7 +1483,8 @@ export const DETAILED_STATES: StateCode[] = Object.values(STATE_GUIDANCE)
  *
  * Derived from the state names rather than hand-written, so a slug can never
  * drift from the state it names. `stateSlug` lives in shared/ because the
- * Worker needs it too, for the sitemap and for link previews.
+ * Worker needs it too for link previews. The sitemap only lists detailed
+ * states — see `shared/stateLandings.ts`.
  */
 export const STATE_SLUG: Record<StateCode, string> = Object.fromEntries(
   US_STATES.map((s) => [s.code, stateSlug(s.name)]),

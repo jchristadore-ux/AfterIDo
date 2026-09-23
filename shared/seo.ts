@@ -93,10 +93,16 @@ export function stateSlug(name: string): string {
     .replace(/^-|-$/g, '');
 }
 
-export function stateGuideMeta(stateName: string): PageMeta {
+export function stateGuideMeta(
+  stateName: string,
+  opts?: { detailed?: boolean },
+): PageMeta {
   return {
     title: `Name change after marriage in ${stateName} — step by step`,
     description: `How to change your name after getting married in ${stateName}: the order to do it in, which agency handles each step, what to bring, and the official links for each one.`,
+    // Basic coverage pages stay reachable in-app and via direct links, but are
+    // not pitched to search engines as content until we promote them to detailed.
+    noindex: opts?.detailed === false ? true : undefined,
   };
 }
 
@@ -108,12 +114,20 @@ const STATE_GUIDE_PREFIX = '/name-change-after-marriage/';
  * Anything under /app is a signed-in screen containing the user's own details;
  * it is never indexed and never gets a link preview beyond the default.
  */
-export function metaForPath(path: string, stateNameForSlug: (slug: string) => string | null): PageMeta {
+export function metaForPath(
+  path: string,
+  stateNameForSlug: (slug: string) => string | null,
+  isDetailedSlug?: (slug: string) => boolean,
+): PageMeta {
   const clean = path.replace(/\/+$/, '') || '/';
 
   if (clean.startsWith(STATE_GUIDE_PREFIX)) {
-    const name = stateNameForSlug(clean.slice(STATE_GUIDE_PREFIX.length));
-    if (name) return stateGuideMeta(name);
+    const slug = clean.slice(STATE_GUIDE_PREFIX.length);
+    const name = stateNameForSlug(slug);
+    if (name) {
+      const detailed = isDetailedSlug ? isDetailedSlug(slug) : true;
+      return stateGuideMeta(name, { detailed });
+    }
   }
 
   if (clean.startsWith('/app')) {
