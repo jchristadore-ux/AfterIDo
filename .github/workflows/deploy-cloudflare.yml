@@ -134,6 +134,28 @@ jobs:
             exit 1
           fi
 
+      - name: Ensure R2 documents bucket exists
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          # WS3 binds env.DOCUMENTS to after-i-do-documents. Deploy fails with
+          # Cloudflare error 10085 if the bucket is missing. Create is idempotent
+          # enough for CI: treat "already exists" as success.
+          set +e
+          out=$(npx --yes wrangler@4 r2 bucket create after-i-do-documents 2>&1)
+          code=$?
+          echo "$out"
+          if [ $code -eq 0 ]; then
+            exit 0
+          fi
+          if echo "$out" | grep -qiE 'already exists|code: 10004|A bucket with this name already exists'; then
+            echo "Bucket already present — continuing."
+            exit 0
+          fi
+          echo "::error::Could not create R2 bucket after-i-do-documents. Add Account → Workers R2 Storage → Edit to CLOUDFLARE_API_TOKEN, or create the bucket in the dashboard, then re-run."
+          exit 1
+
       - name: Apply database migrations
         if: steps.creds.outputs.ready == 'true'
         env:
